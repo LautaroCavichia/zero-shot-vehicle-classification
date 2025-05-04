@@ -1,0 +1,13 @@
+version: '3'
+
+services:
+  benchmark:
+    image: glip-benchmark  # Use the image name you built
+    platform: linux/amd64
+    volumes:
+      - ./:/app
+      - ./data:/app/data
+      - ./annotations:/app/annotations
+    environment:
+      - PYTHONPATH=/app
+    command: python main.py --data_dir data --results_dir results --limit 100 --save_visualizations
