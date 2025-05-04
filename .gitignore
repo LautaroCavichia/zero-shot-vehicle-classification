@@ -3,3 +3,4 @@
 /results*
 yolo*.pt 
 *.pyc
+/YOLO-World
