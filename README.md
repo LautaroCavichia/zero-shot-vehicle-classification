@@ -7,15 +7,17 @@ This project benchmarks various combinations of zero-shot object detectors and c
 The benchmark evaluates the following:
 
 1. Detector + Classifier combinations:
-   - YOLOv8 + CLIP
-   - YOLOv8 + OpenCLIP
-   - YOLOv8 + ViT
+   - YOLOv12 + CLIP
+   - YOLOv12 + OpenCLIP
+   - YOLOv12 + GIT 
    - Supervision + CLIP
    - Supervision + OpenCLIP
-   - Supervision + ViT
+   - Supervision + GIT
+   - SSD + CLIP
+   - SSD + OpenCLIP
+   - SSD + GIT
 
 2. End-to-end zero-shot vision-language models:
-   - GLIP (Grounded Language-Image Pretraining)
    - YOLO-World
 
 ## Requirements
@@ -77,7 +79,7 @@ The benchmark classifies vehicles into the following classes:
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-username/zero-shot-vehicle-benchmark.git
+   git clone https://github.com/LautaroCavichia/zero-shot-vehicle-benchmark.git
    cd zero-shot-vehicle-benchmark
    ```
 
@@ -92,7 +94,7 @@ The benchmark classifies vehicles into the following classes:
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-username/zero-shot-vehicle-benchmark.git
+   git clone https://github.com/LautaroCavichia/zero-shot-vehicle-benchmark.git
    cd zero-shot-vehicle-benchmark
    ```
 
@@ -168,9 +170,10 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Acknowledgements
 
-- GLIP: [microsoft/GLIP](https://github.com/microsoft/GLIP)
 - YOLO-World: [AILab-CVC/YOLO-World](https://github.com/AILab-CVC/YOLO-World)
-- YOLOv8: [ultralytics/ultralytics](https://github.com/ultralytics/ultralytics)
+- YOLOv12: [ultralytics/ultralytics](https://github.com/ultralytics/ultralytics)
 - CLIP: [openai/CLIP](https://github.com/openai/CLIP)
 - OpenCLIP: [mlfoundations/open_clip](https://github.com/mlfoundations/open_clip)
 - Supervision: [roboflow/supervision](https://github.com/roboflow/supervision)
+- SSD
+- GIT
