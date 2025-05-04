@@ -1,0 +1,5 @@
+/data
+/GLIP
+/results*
+yolo*.pt 
+*.pyc
