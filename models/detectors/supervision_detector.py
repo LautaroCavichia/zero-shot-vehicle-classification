@@ -17,7 +17,7 @@ class SupervisionDetector:
     """Supervision-based detector for object detection"""
     
     # COCO dataset class IDs for vehicles
-    VEHICLE_CLASS_IDS = [2, 3, 5, 7]  # car, motorcycle, bus, truck
+    VEHICLE_CLASS_IDS = [0, 2, 3, 5, 7]  # car, motorcycle, bus, truck
     
     MODEL_SIZES = {
         "small": "yolov8s.pt",
