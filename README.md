@@ -20,6 +20,11 @@ The benchmark evaluates the following:
 2. End-to-end zero-shot vision-language models:
    - YOLO-World
 
+
+![speed_vs_accuracy](https://github.com/user-attachments/assets/f4af8d5b-ace4-485d-89e8-2476e73f9ec8)
+
+   
+
 ## Requirements
 
 - Python 3.8+
