@@ -9,12 +9,14 @@ import numpy as np
 from models.detectors.yolo import YOLOv12Detector
 from models.detectors.supervision_detector import SupervisionDetector
 from models.detectors.ssd import SSDDetector
+
 from models.classifiers.clip import CLIPClassifier
 from models.classifiers.openclip import OpenCLIPClassifier
-from models.classifiers.vilt import ViLTClassifier
 from models.classifiers.git import GitClassifier
-# from models.end_to_end.glip import GLIPDetector
+
 from models.end_to_end.yolo_world import YOLOWorldDetector
+from models.end_to_end.owlv2 import OWLv2Detector
+from models.end_to_end.grounding_dino import GroundingDINODetector
 
 
 class InferencePipeline:
@@ -36,9 +38,10 @@ class InferencePipeline:
         
         if end_to_end:
             # Load end-to-end model
-            if detector_name == "glip":
-                # self.model = GLIPDetector()
-                print("GLIP is not supported yet")
+            if detector_name == "dino":
+                self.model = GroundingDINODetector(model_size="base")
+            elif detector_name == "owlv2":
+                self.model = OWLv2Detector(model_size="base")
             elif detector_name == "yolo_world":
                 self.model = YOLOWorldDetector(model_size="medium")
             else:
@@ -62,8 +65,6 @@ class InferencePipeline:
                 self.classifier = CLIPClassifier(model_size="medium")
             elif classifier_name == "openclip":
                 self.classifier = OpenCLIPClassifier()
-            elif classifier_name == "vilt":
-                self.classifier = ViLTClassifier()
             elif classifier_name == "git":
                 self.classifier = GitClassifier()
             else:
@@ -156,5 +157,5 @@ def create_pipeline(detector: str, classifier: str = None) -> InferencePipeline:
     Returns:
         InferencePipeline instance
     """
-    end_to_end = classifier is None and detector in ["glip", "yolo_world"]
+    end_to_end = classifier is None and detector in ["dino", "yolo_world", "owlv2"]
     return InferencePipeline(detector, classifier, end_to_end)

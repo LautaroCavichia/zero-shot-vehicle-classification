@@ -128,6 +128,14 @@ END_TO_END_CONFIGS = {
         "model_size": "small",
         "confidence_threshold": 0.3,
     },
+    "owlv2": {
+        "model_size": "base",
+        "confidence_threshold": 0.3,
+    },
+    "dino": {
+        "model_size": "base",
+        "confidence_threshold": 0.3,
+    },
 }
 
 # Benchmark settings
