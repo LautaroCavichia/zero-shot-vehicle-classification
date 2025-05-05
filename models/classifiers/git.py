@@ -64,7 +64,7 @@ class GitClassifier:
         with torch.no_grad():
             generated_ids = self.git_model.generate(
                 pixel_values=processed_image_inputs["pixel_values"],
-                max_length=50 # Adjust max length as needed
+                max_length=40 # Adjust max length as needed
             )
         # Decode the generated IDs, skipping special tokens
         caption = self.git_processor.batch_decode(generated_ids, skip_special_tokens=True)[0].strip()
@@ -89,7 +89,7 @@ class GitClassifier:
 
         # 2. Generate Caption using GIT
         caption = self._generate_caption(inputs)
-        print(f"Generated Caption: {caption}") # For debugging
+        # print(f"Generated Caption: {caption}") # For debugging
 
         # 3. Embed the generated caption
         caption_embedding = self.similarity_model.encode(
