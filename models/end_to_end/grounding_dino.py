@@ -114,7 +114,7 @@ class GroundingDINODetector:
         processed_detections = []
         
         # Process detection results
-        for box, score, text_labels in zip(result["boxes"], result["scores"], result["labels"]):
+        for box, score, text_labels in zip(result["boxes"], result["scores"], result["text_labels"]):
             # Convert box format: [x1, y1, x2, y2]
             x1, y1, x2, y2 = box.tolist()
             

@@ -48,22 +48,22 @@ def run_benchmark(args):
     # Define pipelines to benchmark
     pipelines = [
         # Detector + Classifier combinations
-        # ('yolov12', 'clip'),
-        # ('yolov12', 'openclip'),
-        # ('yolov12', 'git'),
+        ('yolov12', 'clip'),
+        ('yolov12', 'openclip'),
+        ('yolov12', 'git'),
 
-        # ('supervision', 'clip'),
-        # ('supervision', 'openclip'),
-        # ('supervision', 'git'),
+        ('supervision', 'clip'),
+        ('supervision', 'openclip'),
+        ('supervision', 'git'),
    
-        # ('ssd', 'clip'),
-        # ('ssd', 'openclip'),
-        # ('ssd', 'git'),
+        ('ssd', 'clip'),
+        ('ssd', 'openclip'),
+        ('ssd', 'git'),
 
         
         # End-to-end models
         ('dino', None),
-        ('owlv2', None),
+        # ('owlv2', None),
         ('yolo_world', None),
     ]
     
@@ -129,7 +129,7 @@ def run_benchmark(args):
                     
                     # Update progress
                     completed_iterations += 1
-                    if completed_iterations % 50 == 0:  # Update every 50 iterations to reduce overhead
+                    if completed_iterations % 100 == 0:  # Update every 50 iterations to reduce overhead
                         elapsed_time = datetime.now() - start_time
                         iterations_per_second = completed_iterations / elapsed_time.total_seconds()
                         remaining_iterations = total_iterations - completed_iterations
