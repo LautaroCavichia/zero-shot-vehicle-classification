@@ -21,11 +21,11 @@ class SSDDetector:
         "medium": "ssd_vgg16",
     }
 
-    def __init__(self, model_size="medium", conf_threshold=None, custom_model_path=None):
+    def __init__(self, model_size="small", conf_threshold=None, custom_model_path=None):
         config = DETECTOR_CONFIGS.get('ssd', {
             'model_size': 'medium',
             'conf_threshold': 0.3,
-            'vehicle_classes': [1, 2, 3, 5, 7]  # COCO class IDs for vehicles
+            'vehicle_classes': [0, 2, 3, 5, 7]  # COCO class IDs for vehicles
         })
 
         self._model_size = model_size
