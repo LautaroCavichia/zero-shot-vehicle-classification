@@ -46,8 +46,9 @@ def clear_memory():
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
     # For Apple Silicon / Metal
-    if hasattr(torch.mps, 'empty_cache'):
-        torch.mps.empty_cache()
+    elif torch.backends.mps.is_available():
+        if hasattr(torch.mps, 'empty_cache'):
+            torch.mps.empty_cache()
 
 
 def run_benchmark(args):
@@ -60,21 +61,21 @@ def run_benchmark(args):
     pipelines = [
         # Detector + Classifier combinations
         ('yolov12', 'clip'),
-        # ('yolov12', 'openclip'),
-        # ('yolov12', 'git'),
+        ('yolov12', 'openclip'),
+        ('yolov12', 'git'),
 
-        # ('supervision', 'clip'),
+        ('supervision', 'clip'),
         ('supervision', 'openclip'),
         ('supervision', 'git'),
    
         ('ssd', 'clip'),
-        # ('ssd', 'openclip'),
-        # ('ssd', 'git'),
+        ('ssd', 'openclip'),
+        ('ssd', 'git'),
 
         
         # End-to-end models
-        # ('dino', None),
-        # ('owlv2', None),
+        ('dino', None),
+        ('owlv2', None),
         ('yolo_world', None),
     ]
     
