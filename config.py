@@ -79,17 +79,17 @@ DETECTOR_CONFIGS = {
     "yolov12": {
         "model_path": "yolo12m.pt",
         "conf_threshold": 0.3,
-        "vehicle_classes": [0, 2, 3, 5, 7],  
+        "vehicle_classes": [1, 2, 3, 5, 7],  
     },
     "supervision": {
         "model_size": "medium",
         "conf_threshold": 0.3,
-        "vehicle_classes": [0, 2, 3, 5, 7],  
+        "vehicle_classes": [1, 2, 3, 5, 7],  
     },
        "ssd": {
         "model_size": "medium",
         "conf_threshold": 0.3,
-        "vehicle_classes": [0, 2, 3, 5, 7],  
+        "vehicle_classes": [1, 2, 3, 5, 7],  
     },
 }
 
@@ -112,10 +112,11 @@ END_TO_END_CONFIGS = {
         "model_size": "base",
         "confidence_threshold": 0.3,
     },
-    "dino": {
-        "model_size": "base",
-        "confidence_threshold": 0.3,
-    },
+    'dino': {
+        "model_size": "tiny",
+        'confidence_threshold': 0.4,
+        'text_threshold': 0.3,      
+        }
 }
 
 
