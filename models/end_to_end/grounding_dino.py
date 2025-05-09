@@ -51,7 +51,7 @@ class GroundingDINODetector:
             self.vehicle_classes_list = VEHICLE_CLASSES
             print(f"Using VEHICLE_CLASSES from config: {self.vehicle_classes_list}")
         else:
-            self.vehicle_classes_list = ["car", "truck", "bus", "van", "person"] # Default if not provided or found
+            self.vehicle_classes_list = ["car", "truck", "bus", "van", "person"] 
             print(f"Warning: VEHICLE_CLASSES not found in config or override. Using default: {self.vehicle_classes_list}")
 
         # Set up model path

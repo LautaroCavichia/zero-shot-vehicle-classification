@@ -50,7 +50,7 @@ class OWLv2Detector:
         print(f"OWLv2 detector using device: {self.device}")
         
         # Store classes for detection
-        self.vehicle_classes = ["car", "minivan", "truck", "bus", "emergency", "person"]
+        self.vehicle_classes = ["car", "minivan", "truck", "bus", "person"]
         
         self._init_model()
         
