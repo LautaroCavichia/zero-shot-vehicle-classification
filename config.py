@@ -15,7 +15,7 @@ RESULTS_DIR = PROJECT_ROOT / "results"
 RESULTS_DIR.mkdir(exist_ok=True)
 
 # Vehicle classes for zero-shot classification
-VEHICLE_CLASSES = ["car", "van", "truck", "bus", "emergency", "non-vehicle"]
+VEHICLE_CLASSES = ["car", "van", "truck", "bus", "non-vehicle"]
 
 # CLIP text templates for better zero-shot performance
 CLIP_TEMPLATES = [
@@ -56,14 +56,6 @@ CLASS_DESCRIPTIONS = {
         "a school bus",
         "a coach bus",
         "a double-decker bus",
-    ],
-    "emergency": [
-        "an emergency vehicle with flashing lights",
-        "an ambulance",
-        "a fire truck",
-        "a police car",
-        "an emergency response vehicle",
-        "a paramedic vehicle",
     ],
     "non-vehicle": [
         "a person walking",
