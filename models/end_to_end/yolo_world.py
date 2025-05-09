@@ -18,9 +18,9 @@ class YOLOWorldDetector:
     """YOLO-World detector for end-to-end zero-shot object detection and classification"""
     
     MODEL_SIZES = {
-        "small": "yolov8s-world.pt",
-        "medium": "yolov8m-world.pt",
-        "large": "yolov8l-world.pt"
+        "small": "yolov8s-worldv2.pt",
+        "medium": "yolov8m-worldv2.pt",
+        "large": "yolov8l-worldv2.pt"
     }
     
     def __init__(self, model_size: str = "small", confidence_threshold: float = None, custom_model_path: Optional[str] = None):
