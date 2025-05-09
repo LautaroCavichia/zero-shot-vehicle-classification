@@ -5,9 +5,12 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 import pandas as pd
 
+import matplotlib.patches as patches
+
+from utils.image_preprocessing import enhance_image
 from config import RESULTS_DIR
 
 
@@ -267,87 +270,122 @@ def visualize_results(metrics: Dict[str, Any], save_dir: str = None):
     print(f"Visualizations saved to {save_dir}")
 
 
-def visualize_detection(image: np.ndarray, prediction: Dict[str, Any], save_path: str = None):
+def visualize_detection(image: np.ndarray, prediction: Dict[str, Any], save_path: Optional[str] = None):
     """
-    Visualize a detection and classification result
-    
+    Visualize a single vehicle detection and classification result with improved styling.
+
     Args:
-        image: Input image (RGB format, numpy array)
-        prediction: Prediction dict from the pipeline
-        save_path: Path to save visualization
+        image: Input image (RGB format, numpy array).
+        prediction: Prediction dict from the pipeline, expected keys include:
+                    'main_vehicle_class' (str), 'main_vehicle_confidence' (float),
+                    'detection_time' (float), 'classification_time' (float),
+                    'main_vehicle' (Dict with 'bbox': List[int]).
+        save_path: Optional path to save the visualization. If None, the plot is displayed.
     """
-    plt.figure(figsize=(12, 10))
-    plt.imshow(image)
-    
-    # Set title with overall info
-    class_name = prediction.get('main_vehicle_class', 'unknown')
+    # Ensure image is in RGB format if necessary (assuming enhancement handles this)
+    # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB) # Example if input is BGR
+
+    image = enhance_image(image)
+
+    fig, ax = plt.subplots(1, figsize=(12, 10))
+    ax.imshow(image)
+
+    # Set a clean and informative title
+    class_name = prediction.get('main_vehicle_class', 'Unknown')
     confidence = prediction.get('main_vehicle_confidence', 0.0)
     detection_time = prediction.get('detection_time', 0.0)
     classification_time = prediction.get('classification_time', 0.0)
-    
-    title = f"Vehicle: {class_name} (Conf: {confidence:.2f})\n"
-    title += f"Detection: {detection_time:.3f}s | Classification: {classification_time:.3f}s"
-    plt.title(title, fontsize=14, fontweight='bold')
-    
+
+    title_text = f"Vehicle: {class_name} (Confidence: {confidence:.2f})\n" \
+                 f"Processing Time: Detection {detection_time:.3f}s | Classification {classification_time:.3f}s"
+
+    fig.suptitle(title_text, fontsize=16, fontweight='bold', y=0.95) # Use suptitle for title above subplot
+
     # Extract main vehicle detection
     main_vehicle = prediction.get('main_vehicle')
-    
+
     if main_vehicle:
         # Get bounding box
-        bbox = main_vehicle.get('bbox', [])
-        
-        if len(bbox) == 4:
-            # Create a rectangle patch
+        bbox = main_vehicle.get('bbox')
+
+        if isinstance(bbox, list) and len(bbox) == 4:
+            # Create a rectangle patch with refined styling
             x1, y1, x2, y2 = bbox
-            
-            # Draw bounding box with a thicker, more visible line
-            rect = plt.Rectangle(
+            width = x2 - x1
+            height = y2 - y1
+
+            rect = patches.Rectangle(
                 (x1, y1),
-                x2 - x1,
-                y2 - y1,
-                linewidth=3,
-                edgecolor='lime',
+                width,
+                height,
+                linewidth=3,          # Thicker line
+                edgecolor='cyan',     # A modern contrasting color
                 facecolor='none',
-                alpha=0.8
+                alpha=0.7             # Slightly transparent
             )
-            plt.gca().add_patch(rect)
-            
-            # Add label with improved styling
+            ax.add_patch(rect)
+
+            # Add label with improved styling and placement
             label_text = f"{class_name}: {confidence:.2f}"
-            
-            # Create a more prominent text box
-            plt.text(
-                x1,
-                y1 - 10,
+
+            # Position text slightly inside the top-left corner
+            text_x = x1 + 5  # Add padding from the left edge
+            text_y = y1 + 5  # Add padding from the top edge
+
+            ax.text(
+                text_x,
+                text_y,
                 label_text,
                 color='white',
-                fontsize=14,
+                fontsize=12,
                 fontweight='bold',
+                verticalalignment='top', # Align text top edge with y coordinate
+                horizontalalignment='left', # Align text left edge with x coordinate
                 bbox=dict(
-                    facecolor='green',
-                    alpha=0.8,
-                    boxstyle='round,pad=0.5',
+                    facecolor='teal',    # A color matching the bbox hue
+                    alpha=0.7,           # Match transparency of the box
+                    boxstyle='round,pad=0.4', # Slightly reduced padding
                     edgecolor='black',
                     linewidth=1
                 )
             )
-    
-    plt.axis('off')
-    
-    # Add a subtle border to the entire image
-    plt.gca().spines['top'].set_visible(True)
-    plt.gca().spines['right'].set_visible(True)
-    plt.gca().spines['bottom'].set_visible(True)
-    plt.gca().spines['left'].set_visible(True)
-    plt.gca().spines['top'].set_color('gray')
-    plt.gca().spines['right'].set_color('gray')
-    plt.gca().spines['bottom'].set_color('gray')
-    plt.gca().spines['left'].set_color('gray')
-    
+        else:
+             print(f"Warning: 'main_vehicle' found but 'bbox' is missing or invalid ({bbox}). Skipping bounding box drawing.")
+
+
+    ax.axis('off') # Hide axes
+
+    # Add a subtle border around the plot area (can be handled by spines)
+    # Or add a rectangle patch around the image boundaries if ax.axis('off') is used
+    # ax.patch.set_edgecolor('gray')
+    # ax.patch.set_linewidth(1) # This adds a border to the axes patch, not the image area
+
+    # Alternatively, draw a rectangle around the image bounds manually
+    img_height, img_width, _ = image.shape
+    border_rect = patches.Rectangle(
+        (0, 0),
+        img_width,
+        img_height,
+        linewidth=1,
+        edgecolor='gray',
+        facecolor='none',
+        alpha=0.5
+    )
+    ax.add_patch(border_rect)
+    ax.set_xlim(0, img_width) # Ensure limits match image
+    ax.set_ylim(img_height, 0) # Ensure limits match image (y-axis usually inverted for images)
+
+
+    plt.tight_layout(rect=[0, 0.03, 1, 0.93]) # Adjust layout to prevent title overlap
+
     if save_path:
-        # Ensure directory exists
-        os.makedirs(os.path.dirname(save_path), exist_ok=True)
-        plt.savefig(save_path, bbox_inches='tight', dpi=300)
-        plt.close()
+        try:
+            # Ensure directory exists
+            os.makedirs(os.path.dirname(save_path), exist_ok=True)
+            plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        except Exception as e:
+            print(f"Error saving visualization to {save_path}: {e}")
+        finally:
+            plt.close(fig)
     else:
         plt.show()

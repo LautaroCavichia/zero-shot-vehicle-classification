@@ -7,6 +7,8 @@ import time
 import json
 from pathlib import Path
 from datetime import datetime, timedelta
+import gc
+import torch
 
 import numpy as np
 from tqdm import tqdm
@@ -38,6 +40,15 @@ def parse_args():
     
     return parser.parse_args()
 
+def clear_memory():
+    """Clear cache and force garbage collection between pipeline runs"""
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+    # For Apple Silicon / Metal
+    if hasattr(torch.mps, 'empty_cache'):
+        torch.mps.empty_cache()
+
 
 def run_benchmark(args):
     """Run the benchmark with all pipelines"""
@@ -49,20 +60,20 @@ def run_benchmark(args):
     pipelines = [
         # Detector + Classifier combinations
         ('yolov12', 'clip'),
-        ('yolov12', 'openclip'),
-        ('yolov12', 'git'),
+        # ('yolov12', 'openclip'),
+        # ('yolov12', 'git'),
 
-        ('supervision', 'clip'),
+        # ('supervision', 'clip'),
         ('supervision', 'openclip'),
         ('supervision', 'git'),
    
         ('ssd', 'clip'),
-        ('ssd', 'openclip'),
-        ('ssd', 'git'),
+        # ('ssd', 'openclip'),
+        # ('ssd', 'git'),
 
         
         # End-to-end models
-        ('dino', None),
+        # ('dino', None),
         # ('owlv2', None),
         ('yolo_world', None),
     ]
@@ -140,9 +151,12 @@ def run_benchmark(args):
                                   f"({completed_iterations/total_iterations*100:.1f}%), "
                                   f"ETA: {estimated_remaining}")
                     
-            except Exception as e:
+            except Exception as e:  
                 print(f"Error running pipeline {pipeline_name}: {e}")
                 continue
+            
+            finally:
+                clear_memory()
         
         # Compute metrics for this run
         run_metrics = run_evaluator.compute_metrics()

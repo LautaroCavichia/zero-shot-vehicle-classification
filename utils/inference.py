@@ -10,6 +10,8 @@ from models.classifiers.classifier_factory import ClassifierFactory
 from models.detectors.detector_factory import DetectorFactory
 from models.end_to_end.end_to_end_factory import EndToEndFactory
 
+from utils.image_preprocessing import enhance_image
+
 class InferencePipeline:
     """
     Inference pipeline for running detector+classifier combinations
@@ -67,6 +69,8 @@ class InferencePipeline:
                 Dict with results including timing information
             """
             start_time = time.time()
+            
+            image = enhance_image(image)
             
             if self.end_to_end:
                 # Run end-to-end model

@@ -17,20 +17,20 @@ class SSDDetector:
     """Robust SSD-based detector for object detection"""
 
     MODEL_SIZES = {
-        "small": "ssd_mobilenet_v2",
-        "medium": "ssd_resnet50_fpn",
+        "small": "ssd_mobilenet_v3",
+        "medium": "ssd_vgg16",
     }
 
-    def __init__(self, model_size="small", conf_threshold=None, custom_model_path=None):
+    def __init__(self, model_size="medium", conf_threshold=None, custom_model_path=None):
         config = DETECTOR_CONFIGS.get('ssd', {
-            'model_size': 'small',
+            'model_size': 'medium',
             'conf_threshold': 0.3,
-            'vehicle_classes': [0, 2, 3, 5, 7]  # COCO class IDs for vehicles
+            'vehicle_classes': [1, 2, 3, 5, 7]  # COCO class IDs for vehicles
         })
 
         self._model_size = model_size
         self.conf_threshold = conf_threshold or config.get('conf_threshold', 0.3)
-        self.vehicle_classes = config.get('vehicle_classes', [2, 3, 5, 7])
+        self.vehicle_classes = config.get('vehicle_classes', [0, 2, 3, 5, 7])
 
         # Load model
         if custom_model_path and os.path.exists(custom_model_path):
@@ -40,11 +40,12 @@ class SSDDetector:
             if not model_name:
                 raise ValueError(f"Invalid model size: {model_size}")
 
-            print(f"Loading SSD model: {model_name}")
-            if model_name == "ssd_mobilenet_v2":
-                self.model = torchvision.models.detection.ssdlite320_mobilenet_v3_large(pretrained=True)
-            else:
-                self.model = torchvision.models.detection.ssd300_vgg16(pretrained=True)
+        if model_name == "ssd_mobilenet_v3":
+            self.model = torchvision.models.detection.ssdlite320_mobilenet_v3_large(pretrained=True)
+        elif model_name == "ssd_vgg16":
+            self.model = torchvision.models.detection.ssd300_vgg16(pretrained=True)
+        else:
+            raise ValueError(f"Unsupported SSD model: {model_name}")
 
         self.model.eval()
         self.device = "mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu"
@@ -69,7 +70,7 @@ class SSDDetector:
                 if scores[i] < self.conf_threshold:
                     continue
 
-                class_id = int(labels[i]) - 1
+                class_id = int(labels[i])
                 if class_id in self.vehicle_classes:
                     x1, y1, x2, y2 = boxes[i]
                     detections.append({
