@@ -60,19 +60,19 @@ def run_benchmark(args):
     # Define pipelines to benchmark
     pipelines = [
         # Detector + Classifier combinations
-        ('yolov12', 'clip'),
-        ('yolov12', 'openclip'),
-        ('yolov12', 'git'),
+        # ('yolov12', 'clip'),
+        # ('yolov12', 'openclip'),
+        # ('yolov12', 'git'),
         ('yolov12', 'siglip'),
 
         ('supervision', 'clip'),
-        ('supervision', 'openclip'),
-        ('supervision', 'git'),
+        # ('supervision', 'openclip'),
+        # ('supervision', 'git'),
         ('supervision', 'siglip'),
    
-        ('ssd', 'clip'),
-        ('ssd', 'openclip'),
-        ('ssd', 'git'),
+        # ('ssd', 'clip'),
+        # ('ssd', 'openclip'),
+        # ('ssd', 'git'),
         ('ssd', 'siglip'),
 
         
