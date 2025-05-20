@@ -23,7 +23,6 @@ CLIP_TEMPLATES = [
     "a picture of a {}.",
     "a close-up photo of a {}.",
     "a side view photo of a {}.",
-    "a security camera image of a {}.",
     "a cctv image of a {}.",
     "a traffic camera image of a {}.",
 ]
@@ -31,7 +30,6 @@ CLIP_TEMPLATES = [
 # Class-specific text descriptions
 CLASS_DESCRIPTIONS = {
     "car": [
-        "a small personal automobile",
         "a sedan vehicle",
         "a compact car",
         "a family car",
@@ -92,6 +90,9 @@ CLASSIFIER_CONFIGS = {
     "openclip": {
         "model_name": "ViT-B-32",
         "pretrained": "laion2b_s34b_b79k",
+    },
+    "siglip": {
+        "model_size": "medium",
     },
 }
 
