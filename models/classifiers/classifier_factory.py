@@ -5,6 +5,7 @@ from typing import Dict, Any, Optional, Union, Type
 from models.classifiers.clip import CLIPClassifier
 from models.classifiers.openclip import OpenCLIPClassifier
 from models.classifiers.git import GitClassifier
+from models.classifiers.siglip import SigLIPClassifier
 
 class ClassifierFactory:
     """Factory for creating classifier instances"""
@@ -12,7 +13,8 @@ class ClassifierFactory:
     CLASSIFIER_MAP = {
         'clip': CLIPClassifier,
         'openclip': OpenCLIPClassifier,
-        'git': GitClassifier
+        'git': GitClassifier,
+        'siglip': SigLIPClassifier
     }
     
     @classmethod
@@ -21,7 +23,7 @@ class ClassifierFactory:
         Create a classifier instance of the specified type
         
         Args:
-            classifier_type: Type of classifier to create (one of 'clip', 'openclip', 'git')
+            classifier_type: Type of classifier to create (one of 'clip', 'openclip', 'git', 'siglip')
             **kwargs: Additional arguments to pass to the classifier constructor
             
         Returns:
