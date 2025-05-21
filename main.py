@@ -73,7 +73,7 @@ def run_benchmark(args):
         # ('ssd', 'clip'),
         # ('ssd', 'openclip'),
         # ('ssd', 'git'),
-        ('ssd', 'siglip'),
+        # ('ssd', 'siglip'),
 
         
         # End-to-end models
