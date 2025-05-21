@@ -16,8 +16,7 @@ class SigLIPClassifier:
     """SigLIP-based zero-shot classifier"""
     
     MODEL_SIZES = {
-        "small": "google/siglip-base-patch16-224",
-        "medium": "google/siglip-large-patch16-384",
+        "medium": "google/siglip2-base-patch16-naflex",
         "large": "google/siglip-so400m-patch14-384"
     }
     
@@ -26,7 +25,7 @@ class SigLIPClassifier:
         Initialize SigLIP classifier
         
         Args:
-            model_size: Size of the model to use (small, medium, large)
+            model_size: Size of the model to use (medium, large)
         """
         # Use config values if not provided
         config = CLASSIFIER_CONFIGS.get('siglip', {'model_size': 'medium'})
