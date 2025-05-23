@@ -60,26 +60,25 @@ def run_benchmark(args):
     # Define pipelines to benchmark
     pipelines = [
         # Detector + Classifier combinations
-        # ('yolov12', 'clip'),
-        # ('yolov12', 'openclip'),
-        # ('yolov12', 'git'),
+        ('yolov12', 'clip'),
+        ('yolov12', 'openclip'), 
         ('yolov12', 'siglip'),
-
-        ('supervision', 'clip'),
-        # ('supervision', 'openclip'),
-        # ('supervision', 'git'),
-        ('supervision', 'siglip'),
-   
-        # ('ssd', 'clip'),
-        # ('ssd', 'openclip'),
-        # ('ssd', 'git'),
-        ('ssd', 'siglip'),
-
+        ('yolov12', 'git'),
         
-        # End-to-end models
-        # ('dino', None),
-        # ('owlv2', None),
-        ('yolo_world', None),
+        ('supervision', 'clip'),
+        ('supervision', 'openclip'),
+        ('supervision', 'siglip'), 
+        ('supervision', 'git'),
+   
+        ('ssd', 'clip'),
+        ('ssd', 'openclip'),
+        ('ssd', 'siglip'),
+        ('ssd', 'git'),
+
+        # End-to-end models 
+        ('owlv2', None),        
+        ('yolo_world', None),   
+        ('dino', None),         
     ]
     
      # Create evaluator for overall results

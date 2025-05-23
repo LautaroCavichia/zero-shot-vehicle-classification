@@ -1,128 +1,136 @@
 """
 SSD detector implementation
 """
+import logging
+from typing import List
 import os
-import time
-from typing import Dict, List, Tuple, Optional
 
 import numpy as np
 import torch
 import torchvision
-import cv2
+import torchvision.transforms as transforms
 
-from config import DETECTOR_CONFIGS
+from .base_detector import BaseDetector, DetectionResult
+
+logger = logging.getLogger(__name__)
 
 
-class SSDDetector:
-    """Robust SSD-based detector for object detection"""
-
-    MODEL_SIZES = {
-        "small": "ssd_mobilenet_v3",
-        "medium": "ssd_vgg16",
-    }
-
-    def __init__(self, model_size="small", conf_threshold=None, custom_model_path=None):
-        config = DETECTOR_CONFIGS.get('ssd', {
-            'model_size': 'medium',
-            'conf_threshold': 0.3,
-            'vehicle_classes': [0, 2, 3, 5, 7]  # COCO class IDs for vehicles
-        })
-
-        self._model_size = model_size
-        self.conf_threshold = conf_threshold or config.get('conf_threshold', 0.3)
-        self.vehicle_classes = config.get('vehicle_classes', [0, 2, 3, 5, 7])
-
-        # Load model
-        if custom_model_path and os.path.exists(custom_model_path):
-            self.model = torch.load(custom_model_path)
-        else:
-            model_name = self.MODEL_SIZES.get(self._model_size)
-            if not model_name:
-                raise ValueError(f"Invalid model size: {model_size}")
-
-        if model_name == "ssd_mobilenet_v3":
-            self.model = torchvision.models.detection.ssdlite320_mobilenet_v3_large(pretrained=True)
-        elif model_name == "ssd_vgg16":
-            self.model = torchvision.models.detection.ssd300_vgg16(pretrained=True)
-        else:
-            raise ValueError(f"Unsupported SSD model: {model_name}")
-
-        self.model.eval()
-        self.device = "mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu"
-        self.model.to(self.device)
-        print(f"SSD detector using device: {self.device}")
-
-    def detect(self, image: np.ndarray) -> Tuple[List[Dict], float]:
+class SsdDetector(BaseDetector):
+    """SSD-based detector for object detection"""
+    
+    def _initialize_model(self) -> None:
+        """Initialize SSD model"""
         try:
-            start_time = time.time()
-            image_tensor = torchvision.transforms.functional.to_tensor(image).unsqueeze(0).to(self.device)
-
+            # Get model configuration
+            model_sizes = self.config.get('model_sizes', {})
+            
+            if self.custom_model_path and os.path.exists(self.custom_model_path):
+                # Load custom model
+                self.model = torch.load(self.custom_model_path, map_location=self.device)
+                logger.info(f"Loaded custom SSD model from: {self.custom_model_path}")
+            elif self.model_size in model_sizes:
+                model_name = model_sizes[self.model_size]
+                
+                # Load pretrained SSD model based on configuration
+                if model_name == "ssd_mobilenet_v3":
+                    self.model = torchvision.models.detection.ssdlite320_mobilenet_v3_large(
+                        weights=torchvision.models.detection.SSDLite320_MobileNet_V3_Large_Weights.DEFAULT
+                    )
+                elif model_name == "ssd_vgg16":
+                    self.model = torchvision.models.detection.ssd300_vgg16(
+                        weights=torchvision.models.detection.SSD300_VGG16_Weights.DEFAULT
+                    )
+                else:
+                    raise ValueError(f"Unsupported SSD model: {model_name}")
+                
+                logger.info(f"Loaded pretrained SSD model: {model_name}")
+            else:
+                raise ValueError(f"Invalid model size '{self.model_size}'. "
+                               f"Available sizes: {list(model_sizes.keys())}")
+            
+            # Set model to evaluation mode and move to device
+            self.model.eval()
+            self.model.to(self.device)
+            
+            # Define image preprocessing transforms
+            self.transform = transforms.Compose([
+                transforms.ToTensor(),
+            ])
+            
+            logger.info(f"Successfully initialized SSD model on {self.device}")
+            
+        except Exception as e:
+            logger.error(f"Failed to initialize SSD model: {e}")
+            raise
+    
+    def _run_inference(self, image: np.ndarray) -> List[DetectionResult]:
+        """
+        Run SSD inference on the image
+        
+        Args:
+            image: Input image (RGB format, numpy array)
+            
+        Returns:
+            List of DetectionResult objects
+        """
+        try:
+            # Convert image to tensor and add batch dimension
+            if image.dtype != np.float32:
+                # Normalize to [0, 1] if not already
+                image_tensor = torch.from_numpy(image.astype(np.float32) / 255.0)
+            else:
+                image_tensor = torch.from_numpy(image)
+            
+            # Ensure tensor is in CHW format
+            if image_tensor.dim() == 3 and image_tensor.shape[2] == 3:
+                image_tensor = image_tensor.permute(2, 0, 1)  # HWC to CHW
+            
+            # Add batch dimension and move to device
+            image_tensor = image_tensor.unsqueeze(0).to(self.device)
+            
+            # Run inference
             with torch.no_grad():
                 predictions = self.model(image_tensor)
-
-            pred = predictions[0] if predictions else {}
-            boxes = pred.get('boxes', torch.empty(0)).cpu().numpy()
-            scores = pred.get('scores', torch.empty(0)).cpu().numpy()
-            labels = pred.get('labels', torch.empty(0)).cpu().numpy()
-
+            
             detections = []
-            for i in range(len(boxes)):
-                if scores[i] < self.conf_threshold:
-                    continue
-
-                class_id = int(labels[i])
-                if class_id in self.vehicle_classes:
+            
+            # Process predictions
+            if predictions and len(predictions) > 0:
+                pred = predictions[0]
+                
+                boxes = pred.get('boxes', torch.empty(0)).cpu().numpy()
+                scores = pred.get('scores', torch.empty(0)).cpu().numpy()
+                labels = pred.get('labels', torch.empty(0)).cpu().numpy()
+                
+                for i in range(len(boxes)):
+                    confidence = float(scores[i])
+                    
+                    # Filter by confidence threshold
+                    if confidence < self.confidence_threshold:
+                        continue
+                    
+                    # Get box coordinates [x1, y1, x2, y2]
                     x1, y1, x2, y2 = boxes[i]
-                    detections.append({
-                        'bbox': [float(x1), float(y1), float(x2), float(y2)],
-                        'confidence': float(scores[i]),
-                        'class_id': class_id,
-                        'area': float((x2 - x1) * (y2 - y1)),
-                    })
-
-            inference_time = time.time() - start_time
-            return detections, inference_time
-
+                    
+                    # Get class ID
+                    class_id = int(labels[i])
+                    
+                    # Calculate area
+                    area = (x2 - x1) * (y2 - y1)
+                    
+                    # Create detection result
+                    detection = DetectionResult(
+                        bbox=[float(x1), float(y1), float(x2), float(y2)],
+                        confidence=confidence,
+                        class_id=class_id,
+                        area=float(area)
+                    )
+                    
+                    detections.append(detection)
+            
+            logger.debug(f"SSD detected {len(detections)} objects")
+            return detections
+            
         except Exception as e:
-            print(f"[SSDDetector] Detection error: {e}")
-            return [], 0.0  # Safe fallback
-
-    def find_main_vehicle(self, detections: List[Dict], image_shape: Tuple[int, int, int]) -> Dict:
-        if not detections:
-            # Return a default dummy prediction if no detections found
-            return {
-                'bbox': [0, 0, image_shape[1], image_shape[0]],  # full image
-                'confidence': 0.0,
-                'class_id': 0,
-                'area': float(image_shape[0] * image_shape[1]),
-                'score': 0.0
-            }
-
-        img_height, img_width = image_shape[:2]
-        img_center = (img_width / 2, img_height / 2)
-        img_area = img_width * img_height
-        img_diagonal = np.sqrt(img_width**2 + img_height**2)
-
-        for det in detections:
-            x1, y1, x2, y2 = det['bbox']
-            bbox_center = ((x1 + x2) / 2, (y1 + y2) / 2)
-            distance = np.sqrt((bbox_center[0] - img_center[0])**2 + (bbox_center[1] - img_center[1])**2)
-            normalized_distance = distance / img_diagonal
-            centrality = 1 - normalized_distance
-            size_score = det['area'] / img_area
-            det['score'] = 0.7 * centrality + 0.3 * size_score
-
-        detections.sort(key=lambda x: x['score'], reverse=True)
-        return detections[0]
-
-    def crop_bbox(self, image: np.ndarray, bbox: List[float]) -> np.ndarray:
-        x1, y1, x2, y2 = map(int, bbox)
-        h, w = image.shape[:2]
-        x1, y1 = max(0, x1), max(0, y1)
-        x2, y2 = min(w, x2), min(h, y2)
-
-        if x2 <= x1 or y2 <= y1:
-            # Fallback to center crop
-            return image[h//4:h*3//4, w//4:w*3//4]
-
-        return image[y1:y2, x1:x2]
+            logger.error(f"SSD inference failed: {e}")
+            return []

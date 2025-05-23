@@ -1,12 +1,17 @@
 """
 Detectors package initialization
 """
-from models.detectors.yolo import YOLOv12Detector
-from models.detectors.supervision_detector import SupervisionDetector
-from models.detectors.ssd import SSDDetector
+from .base_detector import BaseDetector, DetectionResult
+from .yolo import Yolov12Detector
+from .supervision_detector import SupervisionDetector
+from .ssd import SsdDetector
+from .detector_factory import DetectorFactory
 
 __all__ = [
-    'YOLOv12Detector',
-    'SupervisionDetector',
-    'SSDDetector',
+    'BaseDetector',
+    'DetectionResult',
+    'Yolov12Detector',
+    'SupervisionDetector', 
+    'SsdDetector',
+    'DetectorFactory',
 ]
