@@ -57,7 +57,7 @@ class BenchmarkConfig:
     END_TO_END_PIPELINES = [
         ('owlv2', None),        
         ('yolo_world', None),   
-        ('dino', None),         
+        # ('dino', None),         
     ]
     
     @classmethod

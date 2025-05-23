@@ -100,9 +100,9 @@ CLASS_DESCRIPTIONS = {
 DETECTOR_CONFIGS = {
     "yolov12": {
         "model_sizes": {
-            "small": "yolo11s.pt",
-            "medium": "yolo11m.pt", 
-            "large": "yolo11l.pt"
+            "small": "yolo12s.pt",
+            "medium": "yolo12m.pt", 
+            "large": "yolo12l.pt"
         },
         "default_model_size": "medium",
         "confidence_threshold": 0.25,
