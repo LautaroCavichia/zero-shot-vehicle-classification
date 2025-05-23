@@ -1,391 +1,473 @@
 """
-Visualization utilities for the zero-shot vehicle benchmark
+Streamlined visualization utilities for the zero-shot vehicle benchmark.
+
+This module provides focused visualizations for accuracy vs speed analysis,
+confusion matrices, and timing metrics without statistical complexity.
 """
 import os
+import logging
+from typing import Dict, List, Any, Optional
+from pathlib import Path
+
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 import numpy as np
 import seaborn as sns
-from typing import Dict, List, Any, Optional
 import pandas as pd
 
-import matplotlib.patches as patches
-
-from utils.image_preprocessing import enhance_image
 from config import RESULTS_DIR
+from utils.image_preprocessing import VehicleImageEnhancer
+
+logger = logging.getLogger(__name__)
 
 
-def visualize_results(metrics: Dict[str, Any], save_dir: str = None):
-    """
-    Visualize benchmark results
+class VisualizationConfig:
+    """Configuration for consistent visualization styling."""
     
-    Args:
-        metrics: Dict of benchmark metrics
-        save_dir: Directory to save visualizations (defaults to RESULTS_DIR)
-    """
-    if save_dir is None:
-        save_dir = RESULTS_DIR
+    # Color schemes
+    PIPELINE_COLORS = sns.color_palette("Set1", 10)
+    METRIC_COLORS = {
+        'accuracy': '#2E86C1',
+        'timing': '#E74C3C',
+        'f1': '#28B463'
+    }
     
-    # Ensure directory exists
-    os.makedirs(save_dir, exist_ok=True)
+    # Style settings
+    FIGURE_DPI = 300
+    FONT_SIZE = {
+        'title': 16,
+        'label': 14,
+        'tick': 12,
+        'legend': 11
+    }
     
-    # Extract pipeline names (excluding 'all')
-    pipeline_names = [name for name in metrics.keys() if name != 'all']
+    # Plot dimensions
+    SINGLE_PLOT_SIZE = (10, 8)
+    COMPARISON_PLOT_SIZE = (12, 8)
+
+
+class MetricsVisualizer:
+    """Handles visualization of benchmark metrics."""
     
-    # Create a DataFrame for easier plotting
-    data = []
-    for pipeline in pipeline_names:
-        pipeline_metrics = metrics[pipeline]
-        data.append({
-            'pipeline': pipeline,
-            'accuracy': pipeline_metrics.get('accuracy', 0),
-            'macro_f1': pipeline_metrics.get('macro_f1', 0),
-            'weighted_f1': pipeline_metrics.get('weighted_f1', 0),
-            'avg_confidence': pipeline_metrics.get('avg_confidence', 0),
-            'avg_detection_time': pipeline_metrics.get('avg_detection_time', 0),
-            'avg_classification_time': pipeline_metrics.get('avg_classification_time', 0),
-            'avg_total_time': pipeline_metrics.get('avg_total_time', 0),
-        })
-    
-    df = pd.DataFrame(data)
-    
-    # Set color palette and style
-    colors = sns.color_palette("viridis", len(pipeline_names))
-    plt.rcParams['font.family'] = 'sans-serif'
-    plt.rcParams['font.sans-serif'] = ['Arial', 'DejaVu Sans', 'Liberation Sans']
-    sns.set_style("whitegrid", {'grid.linestyle': '--', 'grid.alpha': 0.6})
-    
-    # 1. Plot accuracy metrics
-    plt.figure(figsize=(12, 8))
-    
-    accuracy_df = df.melt(
-        id_vars=['pipeline'],
-        value_vars=['accuracy', 'macro_f1', 'weighted_f1'],
-        var_name='Metric',
-        value_name='Value'
-    )
-    
-    ax = sns.barplot(x='pipeline', y='Value', hue='Metric', data=accuracy_df, 
-                palette=sns.color_palette("Blues_d", 3))
-    plt.title('Accuracy Metrics by Pipeline', fontsize=16, fontweight='bold')
-    plt.xlabel('Pipeline', fontsize=14)
-    plt.ylabel('Score', fontsize=14)
-    plt.ylim(0, 1)
-    plt.xticks(rotation=45, ha='right', fontsize=12)
-    plt.yticks(fontsize=12)
-    plt.legend(title='Metric', title_fontsize=12, fontsize=11, loc='best')
-    
-    # Add value labels on top of bars
-    for container in ax.containers:
-        ax.bar_label(container, fmt='%.2f', fontsize=10)
-    
-    plt.tight_layout()
-    plt.savefig(os.path.join(save_dir, 'accuracy_metrics.png'), dpi=300, bbox_inches='tight')
-    plt.close()
-    
-    # 2. Plot timing metrics
-    plt.figure(figsize=(12, 8))
-    
-    timing_df = df.melt(
-        id_vars=['pipeline'],
-        value_vars=['avg_detection_time', 'avg_classification_time', 'avg_total_time'],
-        var_name='Timing Metric',
-        value_name='Time (s)'
-    )
-    
-    ax = sns.barplot(x='pipeline', y='Time (s)', hue='Timing Metric', data=timing_df,
-                palette=sns.color_palette("Oranges_d", 3))
-    plt.title('Timing Metrics by Pipeline', fontsize=16, fontweight='bold')
-    plt.xlabel('Pipeline', fontsize=14)
-    plt.ylabel('Time (seconds)', fontsize=14)
-    plt.xticks(rotation=45, ha='right', fontsize=12)
-    plt.yticks(fontsize=12)
-    plt.legend(title='Metric', title_fontsize=12, fontsize=11, loc='best')
-    
-    # Add value labels on top of bars
-    for container in ax.containers:
-        ax.bar_label(container, fmt='%.3f', fontsize=10)
-    
-    plt.tight_layout()
-    plt.savefig(os.path.join(save_dir, 'timing_metrics.png'), dpi=300, bbox_inches='tight')
-    plt.close()
-    
-    # 3. Plot speed vs. accuracy with improved styling
-    fig, ax = plt.subplots(figsize=(10, 8))
-    
-    # Create a colormap based on weighted F1 score
-    norm = plt.Normalize(df['weighted_f1'].min(), df['weighted_f1'].max())
-    sm = plt.cm.ScalarMappable(cmap="viridis", norm=norm)
-    sm.set_array([])
-    
-    scatter = ax.scatter(
-        df['avg_total_time'],
-        df['accuracy'],
-        s=150,
-        alpha=0.8,
-        c=df['weighted_f1'],
-        cmap="viridis",
-        edgecolors='white',
-        linewidth=1.5
-    )
-    
-    # Add pipeline names as labels
-    for i, pipeline in enumerate(df['pipeline']):
-        ax.annotate(
-            pipeline,
-            (df['avg_total_time'].iloc[i], df['accuracy'].iloc[i]),
-            fontsize=11,
-            ha='center',
-            va='bottom',
-            xytext=(0, 7),
-            textcoords='offset points',
-            fontweight='bold'
-        )
-    
-    plt.title('Speed vs. Accuracy', fontsize=16, fontweight='bold')
-    plt.xlabel('Average Total Time (seconds)', fontsize=14)
-    plt.ylabel('Accuracy', fontsize=14)
-    plt.grid(True, linestyle='--', alpha=0.6)
-    
-    # Fix the colorbar issue by explicitly specifying the axes
-    cbar = fig.colorbar(sm, ax=ax, label='Weighted F1 Score')
-    cbar.ax.tick_params(labelsize=12)
-    cbar.set_label('Weighted F1 Score', fontsize=12, fontweight='bold')
-    
-    plt.tight_layout()
-    plt.savefig(os.path.join(save_dir, 'speed_vs_accuracy.png'), dpi=300, bbox_inches='tight')
-    plt.close()
-    
-    # 4. Plot confusion matrices for each pipeline with improved styling
-    for pipeline in pipeline_names:
-        pipeline_metrics = metrics[pipeline]
+    def __init__(self, save_dir: str = None):
+        """
+        Initialize the metrics visualizer.
         
-        if 'confusion_matrix' in pipeline_metrics:
-            cm = np.array(pipeline_metrics['confusion_matrix']['matrix'])
-            labels = pipeline_metrics['confusion_matrix']['labels']
-            
-            # Skip if there's only one class (handles the warning)
-            if len(labels) <= 1:
-                print(f"Skipping confusion matrix for {pipeline} - not enough classes")
-                continue
-            
-            plt.figure(figsize=(10, 8))
-            
-            # Normalize confusion matrix for better visualization
-            cm_sum = cm.sum(axis=1)
-            # Avoid division by zero
-            cm_sum[cm_sum == 0] = 1
-            cm_norm = cm.astype('float') / cm_sum[:, np.newaxis]
-            cm_norm = np.nan_to_num(cm_norm)  # Replace NaNs with zeros
-            
-            # Plot both normalized (colors) and absolute (text) values
-            ax = sns.heatmap(
-                cm_norm,
-                annot=cm,
-                fmt='d',
-                cmap='Blues',
-                xticklabels=labels,
-                yticklabels=labels,
-                cbar_kws={'label': 'Normalized Frequency'}
-            )
-            
-            # Rotate the tick labels and set their alignment
-            plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor", fontsize=10)
-            plt.setp(ax.get_yticklabels(), rotation=0, fontsize=10)
-            
-            plt.title(f'Confusion Matrix: {pipeline}', fontsize=16, fontweight='bold')
-            plt.xlabel('Predicted', fontsize=14)
-            plt.ylabel('True', fontsize=14)
-            plt.tight_layout()
-            plt.savefig(os.path.join(save_dir, f'cm_{pipeline}.png'), dpi=300, bbox_inches='tight')
-            plt.close()
+        Args:
+            save_dir: Directory to save visualizations
+        """
+        self.save_dir = Path(save_dir) if save_dir else RESULTS_DIR
+        self.save_dir.mkdir(exist_ok=True)
+        self.config = VisualizationConfig()
+        
+        # Set matplotlib style
+        plt.style.use('default')
+        sns.set_palette(self.config.PIPELINE_COLORS)
+        
+        logger.info(f"Initialized MetricsVisualizer, saving to: {self.save_dir}")
     
-    # 5. NEW: F1 Score vs Efficiency Radar Chart
-    if len(pipeline_names) > 1:
-        # Number of variables
-        categories = ['Accuracy', 'Macro F1', 'Weighted F1', 'Speed (1/time)']
-        N = len(categories)
+    def create_accuracy_vs_speed_plot(self, metrics: Dict[str, Any]) -> None:
+        """
+        Create accuracy vs speed scatter plot.
         
-        # Calculate speed as inverse of time (higher is better)
-        df['speed'] = 1.0 / (df['avg_total_time'] + 0.001)  # Add small constant to avoid division by zero
-        
-        # Normalize all metrics to [0,1] for radar chart
-        df_radar = pd.DataFrame()
-        df_radar['pipeline'] = df['pipeline']
-        
-        for col, new_col in zip(['accuracy', 'macro_f1', 'weighted_f1', 'speed'], categories):
-            min_val = df[col].min()
-            max_val = df[col].max()
-            
-            if max_val > min_val:
-                df_radar[new_col] = (df[col] - min_val) / (max_val - min_val)
-            else:
-                df_radar[new_col] = df[col] / df[col]
-        
-        # What will be the angle of each axis in the plot
-        angles = [n / float(N) * 2 * np.pi for n in range(N)]
-        angles += angles[:1]  # Close the loop
-        
-        # Create the plot
-        fig, ax = plt.subplots(figsize=(12, 10), subplot_kw=dict(polar=True))
-        
-        # Draw one axis per variable and add labels
-        plt.xticks(angles[:-1], categories, fontsize=14)
-        
-        # Draw the y-axis labels (0 to 1)
-        ax.set_rlabel_position(0)
-        plt.yticks([0.25, 0.5, 0.75], ["0.25", "0.50", "0.75"], fontsize=12)
-        plt.ylim(0, 1)
-        
-        # Plot each pipeline
-        for i, pipeline in enumerate(df_radar['pipeline']):
-            values = df_radar.loc[df_radar['pipeline'] == pipeline, categories].values.flatten().tolist()
-            values += values[:1]  # Close the loop
-            
-            ax.plot(angles, values, linewidth=2, linestyle='solid', label=pipeline, color=colors[i])
-            ax.fill(angles, values, alpha=0.1, color=colors[i])
-        
-        # Add title and legend
-        plt.title('Performance Metrics Comparison', size=16, fontweight='bold', y=1.1)
-        plt.legend(loc='upper right', bbox_to_anchor=(0.1, 0.1), fontsize=12)
-        
-        plt.tight_layout()
-        plt.savefig(os.path.join(save_dir, 'performance_radar.png'), dpi=300, bbox_inches='tight')
-        plt.close()
-    
-    # 6. Create a summary table
-    summary_df = df[['pipeline', 'accuracy', 'macro_f1', 'weighted_f1', 'avg_total_time']]
-    summary_df = summary_df.rename(columns={
-        'accuracy': 'Accuracy',
-        'macro_f1': 'Macro F1',
-        'weighted_f1': 'Weighted F1',
-        'avg_total_time': 'Avg. Time (s)'
-    })
-    
-    # Sort by accuracy
-    summary_df = summary_df.sort_values('Accuracy', ascending=False)
-    
-    # Save as CSV
-    summary_df.to_csv(os.path.join(save_dir, 'summary_results.csv'), index=False)
-    
-    print(f"Visualizations saved to {save_dir}")
-
-
-def visualize_detection(image: np.ndarray, prediction: Dict[str, Any], save_path: Optional[str] = None):
-    """
-    Visualize a single vehicle detection and classification result with improved styling.
-
-    Args:
-        image: Input image (RGB format, numpy array).
-        prediction: Prediction dict from the pipeline, expected keys include:
-                    'main_vehicle_class' (str), 'main_vehicle_confidence' (float),
-                    'detection_time' (float), 'classification_time' (float),
-                    'main_vehicle' (Dict with 'bbox': List[int]).
-        save_path: Optional path to save the visualization. If None, the plot is displayed.
-    """
-    # Ensure image is in RGB format if necessary (assuming enhancement handles this)
-    # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB) # Example if input is BGR
-
-    image = enhance_image(image)
-
-    fig, ax = plt.subplots(1, figsize=(12, 10))
-    ax.imshow(image)
-
-    # Set a clean and informative title
-    class_name = prediction.get('main_vehicle_class', 'Unknown')
-    confidence = prediction.get('main_vehicle_confidence', 0.0)
-    detection_time = prediction.get('detection_time', 0.0)
-    classification_time = prediction.get('classification_time', 0.0)
-
-    title_text = f"Vehicle: {class_name} (Confidence: {confidence:.2f})\n" \
-                 f"Processing Time: Detection {detection_time:.3f}s | Classification {classification_time:.3f}s"
-
-    fig.suptitle(title_text, fontsize=16, fontweight='bold', y=0.95) # Use suptitle for title above subplot
-
-    # Extract main vehicle detection
-    main_vehicle = prediction.get('main_vehicle')
-
-    if main_vehicle:
-        # Get bounding box
-        bbox = main_vehicle.get('bbox')
-
-        if isinstance(bbox, list) and len(bbox) == 4:
-            # Create a rectangle patch with refined styling
-            x1, y1, x2, y2 = bbox
-            width = x2 - x1
-            height = y2 - y1
-
-            rect = patches.Rectangle(
-                (x1, y1),
-                width,
-                height,
-                linewidth=3,          # Thicker line
-                edgecolor='cyan',     # A modern contrasting color
-                facecolor='none',
-                alpha=0.7             # Slightly transparent
-            )
-            ax.add_patch(rect)
-
-            # Add label with improved styling and placement
-            label_text = f"{class_name}: {confidence:.2f}"
-
-            # Position text slightly inside the top-left corner
-            text_x = x1 + 5  # Add padding from the left edge
-            text_y = y1 + 5  # Add padding from the top edge
-
-            ax.text(
-                text_x,
-                text_y,
-                label_text,
-                color='white',
-                fontsize=12,
-                fontweight='bold',
-                verticalalignment='top', # Align text top edge with y coordinate
-                horizontalalignment='left', # Align text left edge with x coordinate
-                bbox=dict(
-                    facecolor='teal',    # A color matching the bbox hue
-                    alpha=0.7,           # Match transparency of the box
-                    boxstyle='round,pad=0.4', # Slightly reduced padding
-                    edgecolor='black',
-                    linewidth=1
-                )
-            )
-        else:
-             print(f"Warning: 'main_vehicle' found but 'bbox' is missing or invalid ({bbox}). Skipping bounding box drawing.")
-
-
-    ax.axis('off') # Hide axes
-
-    # Add a subtle border around the plot area (can be handled by spines)
-    # Or add a rectangle patch around the image boundaries if ax.axis('off') is used
-    # ax.patch.set_edgecolor('gray')
-    # ax.patch.set_linewidth(1) # This adds a border to the axes patch, not the image area
-
-    # Alternatively, draw a rectangle around the image bounds manually
-    img_height, img_width, _ = image.shape
-    border_rect = patches.Rectangle(
-        (0, 0),
-        img_width,
-        img_height,
-        linewidth=1,
-        edgecolor='gray',
-        facecolor='none',
-        alpha=0.5
-    )
-    ax.add_patch(border_rect)
-    ax.set_xlim(0, img_width) # Ensure limits match image
-    ax.set_ylim(img_height, 0) # Ensure limits match image (y-axis usually inverted for images)
-
-
-    plt.tight_layout(rect=[0, 0.03, 1, 0.93]) # Adjust layout to prevent title overlap
-
-    if save_path:
+        Args:
+            metrics: Dictionary containing metrics for all pipelines
+        """
         try:
-            # Ensure directory exists
-            os.makedirs(os.path.dirname(save_path), exist_ok=True)
-            plt.savefig(save_path, dpi=300, bbox_inches='tight')
+            # Extract pipeline data (exclude 'overall' if present)
+            pipeline_names = [name for name in metrics.keys() if name != 'overall']
+            
+            if not pipeline_names:
+                logger.warning("No pipeline data found for accuracy vs speed plot")
+                return
+            
+            # Create DataFrame for plotting
+            plot_data = []
+            for pipeline in pipeline_names:
+                pipeline_metrics = metrics[pipeline]
+                plot_data.append({
+                    'pipeline': pipeline,
+                    'accuracy': pipeline_metrics.get('accuracy', 0),
+                    'avg_total_time': pipeline_metrics.get('avg_total_time', 0),
+                    'weighted_f1': pipeline_metrics.get('weighted_f1', 0)
+                })
+            
+            df = pd.DataFrame(plot_data)
+            
+            # Create the plot
+            fig, ax = plt.subplots(figsize=self.config.SINGLE_PLOT_SIZE)
+            
+            # Create scatter plot colored by F1 score
+            scatter = ax.scatter(
+                df['avg_total_time'],
+                df['accuracy'],
+                s=120,
+                c=df['weighted_f1'],
+                cmap='viridis',
+                alpha=0.8,
+                edgecolors='white',
+                linewidth=2
+            )
+            
+            # Add pipeline labels
+            for i, row in df.iterrows():
+                ax.annotate(
+                    row['pipeline'],
+                    (row['avg_total_time'], row['accuracy']),
+                    xytext=(5, 5),
+                    textcoords='offset points',
+                    fontsize=self.config.FONT_SIZE['tick'],
+                    ha='left',
+                    va='bottom',
+                    bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.7)
+                )
+            
+            # Customize plot
+            ax.set_xlabel('Average Total Time (seconds)', fontsize=self.config.FONT_SIZE['label'])
+            ax.set_ylabel('Accuracy', fontsize=self.config.FONT_SIZE['label'])
+            ax.set_title('Accuracy vs Speed Performance', fontsize=self.config.FONT_SIZE['title'], fontweight='bold')
+            ax.grid(True, alpha=0.3)
+            
+            # Add colorbar
+            cbar = plt.colorbar(scatter, ax=ax)
+            cbar.set_label('Weighted F1 Score', fontsize=self.config.FONT_SIZE['label'])
+            cbar.ax.tick_params(labelsize=self.config.FONT_SIZE['tick'])
+            
+            # Set axis limits with padding
+            x_margin = (df['avg_total_time'].max() - df['avg_total_time'].min()) * 0.1
+            y_margin = (df['accuracy'].max() - df['accuracy'].min()) * 0.05
+            
+            ax.set_xlim(df['avg_total_time'].min() - x_margin, df['avg_total_time'].max() + x_margin)
+            ax.set_ylim(max(0, df['accuracy'].min() - y_margin), min(1, df['accuracy'].max() + y_margin))
+            
+            plt.tight_layout()
+            
+            # Save plot
+            save_path = self.save_dir / 'accuracy_vs_speed.png'
+            plt.savefig(save_path, dpi=self.config.FIGURE_DPI, bbox_inches='tight')
+            plt.close()
+            
+            logger.info(f"Saved accuracy vs speed plot to {save_path}")
+            
         except Exception as e:
-            print(f"Error saving visualization to {save_path}: {e}")
-        finally:
-            plt.close(fig)
-    else:
-        plt.show()
+            logger.error(f"Failed to create accuracy vs speed plot: {e}")
+    
+    def create_timing_comparison(self, metrics: Dict[str, Any]) -> None:
+        """
+        Create timing metrics comparison chart.
+        
+        Args:
+            metrics: Dictionary containing metrics for all pipelines
+        """
+        try:
+            # Extract pipeline data
+            pipeline_names = [name for name in metrics.keys() if name != 'overall']
+            
+            if not pipeline_names:
+                logger.warning("No pipeline data found for timing comparison")
+                return
+            
+            # Prepare data
+            timing_data = []
+            for pipeline in pipeline_names:
+                pipeline_metrics = metrics[pipeline]
+                timing_data.append({
+                    'pipeline': pipeline,
+                    'detection_time': pipeline_metrics.get('avg_detection_time', 0),
+                    'classification_time': pipeline_metrics.get('avg_classification_time', 0),
+                    'total_time': pipeline_metrics.get('avg_total_time', 0)
+                })
+            
+            df = pd.DataFrame(timing_data)
+            
+            # Create stacked bar chart
+            fig, ax = plt.subplots(figsize=self.config.COMPARISON_PLOT_SIZE)
+            
+            # Create stacked bars
+            bar_width = 0.6
+            indices = np.arange(len(pipeline_names))
+            
+            p1 = ax.bar(indices, df['detection_time'], bar_width, 
+                       label='Detection Time', color=self.config.METRIC_COLORS['timing'], alpha=0.8)
+            p2 = ax.bar(indices, df['classification_time'], bar_width,
+                       bottom=df['detection_time'], label='Classification Time', 
+                       color=self.config.METRIC_COLORS['accuracy'], alpha=0.8)
+            
+            # Customize plot
+            ax.set_xlabel('Pipeline', fontsize=self.config.FONT_SIZE['label'])
+            ax.set_ylabel('Time (seconds)', fontsize=self.config.FONT_SIZE['label'])
+            ax.set_title('Timing Performance Comparison', fontsize=self.config.FONT_SIZE['title'], fontweight='bold')
+            ax.set_xticks(indices)
+            ax.set_xticklabels(df['pipeline'], rotation=45, ha='right')
+            ax.legend(fontsize=self.config.FONT_SIZE['legend'])
+            ax.grid(True, alpha=0.3)
+            
+            # Add value labels on bars
+            for i, (det_time, cls_time, total_time) in enumerate(zip(df['detection_time'], 
+                                                                    df['classification_time'], 
+                                                                    df['total_time'])):
+                # Total time label on top
+                ax.text(i, total_time + 0.001, f'{total_time:.3f}s', 
+                       ha='center', va='bottom', fontsize=self.config.FONT_SIZE['tick'])
+            
+            plt.tight_layout()
+            
+            # Save plot
+            save_path = self.save_dir / 'timing_comparison.png'
+            plt.savefig(save_path, dpi=self.config.FIGURE_DPI, bbox_inches='tight')
+            plt.close()
+            
+            logger.info(f"Saved timing comparison to {save_path}")
+            
+        except Exception as e:
+            logger.error(f"Failed to create timing comparison: {e}")
+    
+    def create_confusion_matrices(self, metrics: Dict[str, Any]) -> None:
+        """
+        Create confusion matrices for each pipeline.
+        
+        Args:
+            metrics: Dictionary containing metrics for all pipelines
+        """
+        try:
+            pipeline_names = [name for name in metrics.keys() if name != 'overall']
+            
+            for pipeline in pipeline_names:
+                pipeline_metrics = metrics[pipeline]
+                
+                if 'confusion_matrix' not in pipeline_metrics:
+                    logger.debug(f"No confusion matrix data for {pipeline}")
+                    continue
+                
+                cm_data = pipeline_metrics['confusion_matrix']
+                cm_matrix = np.array(cm_data['matrix'])
+                labels = cm_data['labels']
+                
+                # Skip if matrix is too small
+                if len(labels) <= 1:
+                    logger.debug(f"Skipping confusion matrix for {pipeline} - insufficient classes")
+                    continue
+                
+                # Create confusion matrix plot
+                fig, ax = plt.subplots(figsize=self.config.SINGLE_PLOT_SIZE)
+                
+                # Normalize for better visualization
+                cm_normalized = cm_matrix.astype('float') / cm_matrix.sum(axis=1)[:, np.newaxis]
+                cm_normalized = np.nan_to_num(cm_normalized)
+                
+                # Create heatmap
+                sns.heatmap(
+                    cm_normalized,
+                    annot=cm_matrix,  # Show actual counts
+                    fmt='d',
+                    cmap='Blues',
+                    xticklabels=labels,
+                    yticklabels=labels,
+                    cbar_kws={'label': 'Normalized Frequency'},
+                    ax=ax
+                )
+                
+                # Customize plot
+                ax.set_title(f'Confusion Matrix: {pipeline}', 
+                           fontsize=self.config.FONT_SIZE['title'], fontweight='bold')
+                ax.set_xlabel('Predicted Class', fontsize=self.config.FONT_SIZE['label'])
+                ax.set_ylabel('True Class', fontsize=self.config.FONT_SIZE['label'])
+                
+                # Rotate labels for better readability
+                plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
+                plt.setp(ax.get_yticklabels(), rotation=0)
+                
+                plt.tight_layout()
+                
+                # Save plot
+                safe_pipeline_name = pipeline.replace('+', '_').replace('/', '_')
+                save_path = self.save_dir / f'confusion_matrix_{safe_pipeline_name}.png'
+                plt.savefig(save_path, dpi=self.config.FIGURE_DPI, bbox_inches='tight')
+                plt.close()
+                
+                logger.info(f"Saved confusion matrix for {pipeline} to {save_path}")
+                
+        except Exception as e:
+            logger.error(f"Failed to create confusion matrices: {e}")
+    
+    def create_summary_table(self, metrics: Dict[str, Any]) -> None:
+        """
+        Create and save a summary table of key metrics.
+        
+        Args:
+            metrics: Dictionary containing metrics for all pipelines
+        """
+        try:
+            pipeline_names = [name for name in metrics.keys() if name != 'overall']
+            
+            if not pipeline_names:
+                logger.warning("No pipeline data found for summary table")
+                return
+            
+            # Prepare summary data
+            summary_data = []
+            for pipeline in pipeline_names:
+                pipeline_metrics = metrics[pipeline]
+                summary_data.append({
+                    'Pipeline': pipeline,
+                    'Accuracy': f"{pipeline_metrics.get('accuracy', 0):.3f}",
+                    'Weighted F1': f"{pipeline_metrics.get('weighted_f1', 0):.3f}",
+                    'Avg Total Time (s)': f"{pipeline_metrics.get('avg_total_time', 0):.3f}",
+                    'Detection Time (s)': f"{pipeline_metrics.get('avg_detection_time', 0):.3f}",
+                    'Classification Time (s)': f"{pipeline_metrics.get('avg_classification_time', 0):.3f}",
+                    'Count': pipeline_metrics.get('count', 0)
+                })
+            
+            # Create DataFrame and sort by accuracy
+            df = pd.DataFrame(summary_data)
+            df = df.sort_values('Accuracy', ascending=False)
+            
+            # Save as CSV
+            csv_path = self.save_dir / 'benchmark_summary.csv'
+            df.to_csv(csv_path, index=False)
+            
+            logger.info(f"Saved summary table to {csv_path}")
+            
+        except Exception as e:
+            logger.error(f"Failed to create summary table: {e}")
+
+
+class DetectionVisualizer:
+    """Handles visualization of individual detection results."""
+    
+    def __init__(self):
+        """Initialize the detection visualizer."""
+        self.config = VisualizationConfig()
+        self.preprocessor = VehicleImageEnhancer()
+        
+    def visualize_detection(self, 
+                          image: np.ndarray, 
+                          prediction: Dict[str, Any], 
+                          save_path: Optional[str] = None,
+                          enhance_image: bool = True) -> None:
+        """
+        Visualize a single detection result.
+        
+        Args:
+            image: Input image (RGB format)
+            prediction: Prediction dictionary from pipeline
+            save_path: Optional path to save visualization
+            enhance_image: Whether to enhance image for better visualization
+        """
+        try:
+            # Enhance image if requested
+            if enhance_image:
+                display_image = self.preprocessor.preprocess(image)
+            else:
+                display_image = image.copy()
+            
+            # Create figure
+            fig, ax = plt.subplots(figsize=self.config.SINGLE_PLOT_SIZE)
+            ax.imshow(display_image)
+            
+            # Extract prediction information
+            class_name = prediction.get('main_vehicle_class', 'Unknown')
+            confidence = prediction.get('main_vehicle_confidence', 0.0)
+            detection_time = prediction.get('detection_time', 0.0)
+            classification_time = prediction.get('classification_time', 0.0)
+            pipeline_name = prediction.get('pipeline', 'Unknown')
+            
+            # Set title
+            title = (f"Pipeline: {pipeline_name}\n"
+                    f"Class: {class_name} (Confidence: {confidence:.2f})\n"
+                    f"Times - Detection: {detection_time:.3f}s, Classification: {classification_time:.3f}s")
+            
+            fig.suptitle(title, fontsize=self.config.FONT_SIZE['label'], y=0.95)
+            
+            # Draw bounding box if available
+            main_vehicle = prediction.get('main_vehicle')
+            if main_vehicle and 'bbox' in main_vehicle:
+                bbox = main_vehicle['bbox']
+                if len(bbox) == 4:
+                    x1, y1, x2, y2 = bbox
+                    width = x2 - x1
+                    height = y2 - y1
+                    
+                    # Draw rectangle
+                    rect = patches.Rectangle(
+                        (x1, y1), width, height,
+                        linewidth=3,
+                        edgecolor='cyan',
+                        facecolor='none',
+                        alpha=0.8
+                    )
+                    ax.add_patch(rect)
+                    
+                    # Add label
+                    label_text = f"{class_name}: {confidence:.2f}"
+                    ax.text(
+                        x1 + 5, y1 + 5,
+                        label_text,
+                        color='white',
+                        fontsize=self.config.FONT_SIZE['tick'],
+                        fontweight='bold',
+                        bbox=dict(
+                            boxstyle='round,pad=0.3',
+                            facecolor='cyan',
+                            alpha=0.8,
+                            edgecolor='white'
+                        )
+                    )
+            
+            ax.axis('off')
+            plt.tight_layout(rect=[0, 0.03, 1, 0.90])
+            
+            if save_path:
+                # Ensure directory exists
+                os.makedirs(os.path.dirname(save_path), exist_ok=True)
+                plt.savefig(save_path, dpi=self.config.FIGURE_DPI, bbox_inches='tight')
+                plt.close()
+                logger.debug(f"Saved detection visualization to {save_path}")
+            else:
+                plt.show()
+                
+        except Exception as e:
+            logger.error(f"Failed to visualize detection: {e}")
+            if save_path:
+                plt.close()
+
+
+def visualize_results(metrics: Dict[str, Any], save_dir: str = None) -> None:
+    """
+    Main function to generate all benchmark visualizations.
+    
+    Args:
+        metrics: Dictionary containing benchmark metrics
+        save_dir: Directory to save visualizations
+    """
+    try:
+        logger.info("Generating benchmark visualizations...")
+        
+        # Initialize visualizer
+        visualizer = MetricsVisualizer(save_dir)
+        
+        # Generate core visualizations
+        visualizer.create_accuracy_vs_speed_plot(metrics)
+        visualizer.create_timing_comparison(metrics)
+        visualizer.create_confusion_matrices(metrics)
+        visualizer.create_summary_table(metrics)
+        
+        logger.info(f"All visualizations saved to {visualizer.save_dir}")
+        
+    except Exception as e:
+        logger.error(f"Failed to generate visualizations: {e}")
+
+
+def visualize_detection(image: np.ndarray, 
+                       prediction: Dict[str, Any], 
+                       save_path: Optional[str] = None) -> None:
+    """
+    Visualize a single detection result.
+    
+    Args:
+        image: Input image (RGB format)
+        prediction: Prediction dictionary from pipeline
+        save_path: Optional path to save visualization
+    """
+    visualizer = DetectionVisualizer()
+    visualizer.visualize_detection(image, prediction, save_path)
