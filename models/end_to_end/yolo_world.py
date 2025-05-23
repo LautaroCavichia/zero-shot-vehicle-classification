@@ -23,7 +23,7 @@ class YOLOWorldDetector:
         "large": "yolov8l-worldv2.pt"
     }
     
-    def __init__(self, model_size: str = "small", confidence_threshold: float = None, custom_model_path: Optional[str] = None):
+    def __init__(self, model_size: str = "medium", confidence_threshold: float = None, custom_model_path: Optional[str] = None):
         """
         Initialize YOLO-World detector
         
