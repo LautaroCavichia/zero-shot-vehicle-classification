@@ -1,0 +1,203 @@
+2025-05-23 10:41:48,733 - __main__ - INFO - Python executable: /Users/lautaro/Desktop/Projects/MBA/zero-shot-vehicle-classification/.venv/bin/python
+2025-05-23 10:41:48,733 - __main__ - INFO - Working directory: /Users/lautaro/Desktop/Projects/MBA/zero-shot-vehicle-classification
+2025-05-23 10:41:48,782 - __main__ - INFO - MPS (Apple Silicon) available
+2025-05-23 10:41:48,782 - __main__ - INFO - Starting Zero-Shot Vehicle Detection Benchmark
+2025-05-23 10:41:48,782 - __main__ - INFO - Arguments: {'data_dir': 'data', 'results_dir': '/Users/lautaro/Desktop/Projects/MBA/zero-shot-vehicle-classification/results', 'limit': 10, 'save_visualizations': False, 'visualize_only': False, 'log_level': 'INFO'}
+2025-05-23 10:41:48,783 - __main__ - INFO - Initialized BenchmarkRunner with results dir: /Users/lautaro/Desktop/Projects/MBA/zero-shot-vehicle-classification/results
+2025-05-23 10:41:48,783 - __main__ - INFO - Starting benchmark execution...
+2025-05-23 10:41:48,783 - __main__ - INFO - Loading dataset...
+2025-05-23 10:41:48,787 - utils.data_loader - WARNING - Missing expected categories: {'Non-Vehicle'}
+2025-05-23 10:41:48,787 - utils.data_loader - WARNING - Category validation failed, proceeding with available categories
+2025-05-23 10:41:48,791 - utils.data_loader - INFO - Loaded COCO dataset:
+2025-05-23 10:41:48,791 - utils.data_loader - INFO -   - Images: 837
+2025-05-23 10:41:48,791 - utils.data_loader - INFO -   - Annotations: 852
+2025-05-23 10:41:48,791 - utils.data_loader - INFO -   - Categories: ['Car', 'Van', 'Truck', 'Bus', 'Non-vehicle']
+2025-05-23 10:41:48,792 - utils.data_loader - INFO - Initialized COCOVehicleDataset with 837 images
+2025-05-23 10:41:48,800 - __main__ - INFO - Dataset loaded successfully:
+2025-05-23 10:41:48,800 - __main__ - INFO -   - Total images: 837
+2025-05-23 10:41:48,800 - __main__ - INFO -   - Total annotations: 852
+2025-05-23 10:41:48,800 - __main__ - INFO -   - Class distribution: {'car': 489, 'van': 218, 'truck': 52, 'bus': 4, 'non-vehicle': 89}
+2025-05-23 10:41:48,800 - __main__ - INFO - Processing 10 images
+2025-05-23 10:41:48,801 - utils.evaluation - INFO - Initialized BenchmarkEvaluator
+2025-05-23 10:41:48,801 - __main__ - INFO - Running pipeline 1/15: yolov12+clip
+2025-05-23 10:41:48,801 - models.detectors.yolo - INFO - Using model: yolo11m.pt
+2025-05-23 10:41:49,059 - models.detectors.yolo - INFO - Successfully initialized YOLOv12 model on mps
+2025-05-23 10:41:49,059 - models.detectors.base_detector - INFO - Initialized yolov12 detector with model size: medium, confidence threshold: 0.25, device: mps
+2025-05-23 10:41:49,059 - models.detectors.detector_factory - INFO - Successfully created yolov12 detector
+2025-05-23 10:41:52,637 - models.classifiers.clip - INFO - Successfully initialized CLIP model 'ViT-B/32' on mps
+2025-05-23 10:41:52,637 - models.classifiers.base_classifier - INFO - Initialized clip classifier with model size: medium, device: mps
+2025-05-23 10:41:52,637 - models.classifiers.classifier_factory - INFO - Successfully created clip classifier
+2025-05-23 10:41:57,202 - __main__ - INFO - Completed pipeline: yolov12+clip
+2025-05-23 10:41:57,414 - __main__ - INFO - Running pipeline 2/15: yolov12+openclip
+2025-05-23 10:41:57,414 - models.detectors.yolo - INFO - Using model: yolo11m.pt
+2025-05-23 10:41:57,623 - models.detectors.yolo - INFO - Successfully initialized YOLOv12 model on mps
+2025-05-23 10:41:57,623 - models.detectors.base_detector - INFO - Initialized yolov12 detector with model size: medium, confidence threshold: 0.25, device: mps
+2025-05-23 10:41:57,623 - models.detectors.detector_factory - INFO - Successfully created yolov12 detector
+2025-05-23 10:41:57,623 - root - INFO - Loaded ViT-B-32 model config.
+2025-05-23 10:41:59,476 - root - INFO - Loading pretrained ViT-B-32 weights (laion2b_s34b_b79k).
+2025-05-23 10:42:00,832 - models.classifiers.openclip - INFO - Successfully initialized OpenCLIP model 'ViT-B-32' with pretrained 'laion2b_s34b_b79k' on mps
+2025-05-23 10:42:00,833 - models.classifiers.base_classifier - INFO - Initialized openclip classifier with model size: medium, device: mps
+2025-05-23 10:42:00,833 - models.classifiers.classifier_factory - INFO - Successfully created openclip classifier
+2025-05-23 10:42:04,226 - __main__ - INFO - Completed pipeline: yolov12+openclip
+2025-05-23 10:42:04,472 - __main__ - INFO - Running pipeline 3/15: yolov12+siglip
+2025-05-23 10:42:04,473 - models.detectors.yolo - INFO - Using model: yolo11m.pt
+2025-05-23 10:42:04,705 - models.detectors.yolo - INFO - Successfully initialized YOLOv12 model on mps
+2025-05-23 10:42:04,705 - models.detectors.base_detector - INFO - Initialized yolov12 detector with model size: medium, confidence threshold: 0.25, device: mps
+2025-05-23 10:42:04,705 - models.detectors.detector_factory - INFO - Successfully created yolov12 detector
+2025-05-23 10:42:08,253 - models.classifiers.siglip - INFO - Successfully initialized SigLIP model 'google/siglip-base-patch16-224' on mps
+2025-05-23 10:42:08,254 - models.classifiers.base_classifier - INFO - Initialized siglip classifier with model size: medium, device: mps
+2025-05-23 10:42:08,254 - models.classifiers.classifier_factory - INFO - Successfully created siglip classifier
+2025-05-23 10:42:12,556 - __main__ - INFO - Completed pipeline: yolov12+siglip
+2025-05-23 10:42:12,782 - __main__ - INFO - Running pipeline 4/15: yolov12+git
+2025-05-23 10:42:12,782 - models.detectors.yolo - INFO - Using model: yolo11m.pt
+2025-05-23 10:42:12,975 - models.detectors.yolo - INFO - Successfully initialized YOLOv12 model on mps
+2025-05-23 10:42:12,975 - models.detectors.base_detector - INFO - Initialized yolov12 detector with model size: medium, confidence threshold: 0.25, device: mps
+2025-05-23 10:42:12,975 - models.detectors.detector_factory - INFO - Successfully created yolov12 detector
+2025-05-23 10:42:15,336 - sentence_transformers.SentenceTransformer - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-23 10:42:17,334 - models.classifiers.git - INFO - Successfully initialized GIT model 'microsoft/git-base' and similarity model 'all-MiniLM-L6-v2' on mps
+2025-05-23 10:42:17,334 - models.classifiers.base_classifier - INFO - Initialized git classifier with model size: medium, device: mps
+2025-05-23 10:42:17,334 - models.classifiers.classifier_factory - INFO - Successfully created git classifier
+2025-05-23 10:42:26,160 - __main__ - INFO - Completed pipeline: yolov12+git
+2025-05-23 10:42:26,322 - __main__ - INFO - Running pipeline 5/15: supervision+clip
+2025-05-23 10:42:26,322 - models.detectors.supervision_detector - INFO - Using model: yolov8m.pt
+2025-05-23 10:42:26,495 - models.detectors.supervision_detector - INFO - Successfully initialized Supervision detector on mps
+2025-05-23 10:42:26,495 - models.detectors.base_detector - INFO - Initialized supervision detector with model size: medium, confidence threshold: 0.25, device: mps
+2025-05-23 10:42:26,495 - models.detectors.detector_factory - INFO - Successfully created supervision detector
+2025-05-23 10:42:29,700 - models.classifiers.clip - INFO - Successfully initialized CLIP model 'ViT-B/32' on mps
+2025-05-23 10:42:29,700 - models.classifiers.base_classifier - INFO - Initialized clip classifier with model size: medium, device: mps
+2025-05-23 10:42:29,700 - models.classifiers.classifier_factory - INFO - Successfully created clip classifier
+2025-05-23 10:42:33,420 - __main__ - INFO - Progress: 50/150 (33.3%) - ETA: 0:01:29.238922
+2025-05-23 10:42:33,421 - __main__ - INFO - Completed pipeline: supervision+clip
+2025-05-23 10:42:33,580 - __main__ - INFO - Running pipeline 6/15: supervision+openclip
+2025-05-23 10:42:33,580 - models.detectors.supervision_detector - INFO - Using model: yolov8m.pt
+2025-05-23 10:42:33,745 - models.detectors.supervision_detector - INFO - Successfully initialized Supervision detector on mps
+2025-05-23 10:42:33,745 - models.detectors.base_detector - INFO - Initialized supervision detector with model size: medium, confidence threshold: 0.25, device: mps
+2025-05-23 10:42:33,745 - models.detectors.detector_factory - INFO - Successfully created supervision detector
+2025-05-23 10:42:33,745 - root - INFO - Loaded ViT-B-32 model config.
+2025-05-23 10:42:35,514 - root - INFO - Loading pretrained ViT-B-32 weights (laion2b_s34b_b79k).
+2025-05-23 10:42:36,710 - models.classifiers.openclip - INFO - Successfully initialized OpenCLIP model 'ViT-B-32' with pretrained 'laion2b_s34b_b79k' on mps
+2025-05-23 10:42:36,711 - models.classifiers.base_classifier - INFO - Initialized openclip classifier with model size: medium, device: mps
+2025-05-23 10:42:36,711 - models.classifiers.classifier_factory - INFO - Successfully created openclip classifier
+2025-05-23 10:42:39,602 - __main__ - INFO - Completed pipeline: supervision+openclip
+2025-05-23 10:42:39,776 - __main__ - INFO - Running pipeline 7/15: supervision+siglip
+2025-05-23 10:42:39,776 - models.detectors.supervision_detector - INFO - Using model: yolov8m.pt
+2025-05-23 10:42:39,932 - models.detectors.supervision_detector - INFO - Successfully initialized Supervision detector on mps
+2025-05-23 10:42:39,933 - models.detectors.base_detector - INFO - Initialized supervision detector with model size: medium, confidence threshold: 0.25, device: mps
+2025-05-23 10:42:39,933 - models.detectors.detector_factory - INFO - Successfully created supervision detector
+2025-05-23 10:42:42,684 - models.classifiers.siglip - INFO - Successfully initialized SigLIP model 'google/siglip-base-patch16-224' on mps
+2025-05-23 10:42:42,687 - models.classifiers.base_classifier - INFO - Initialized siglip classifier with model size: medium, device: mps
+2025-05-23 10:42:42,687 - models.classifiers.classifier_factory - INFO - Successfully created siglip classifier
+2025-05-23 10:42:46,578 - __main__ - INFO - Completed pipeline: supervision+siglip
+2025-05-23 10:42:46,762 - __main__ - INFO - Running pipeline 8/15: supervision+git
+2025-05-23 10:42:46,762 - models.detectors.supervision_detector - INFO - Using model: yolov8m.pt
+2025-05-23 10:42:46,913 - models.detectors.supervision_detector - INFO - Successfully initialized Supervision detector on mps
+2025-05-23 10:42:46,913 - models.detectors.base_detector - INFO - Initialized supervision detector with model size: medium, confidence threshold: 0.25, device: mps
+2025-05-23 10:42:46,913 - models.detectors.detector_factory - INFO - Successfully created supervision detector
+2025-05-23 10:42:49,238 - sentence_transformers.SentenceTransformer - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-23 10:42:50,966 - models.classifiers.git - INFO - Successfully initialized GIT model 'microsoft/git-base' and similarity model 'all-MiniLM-L6-v2' on mps
+2025-05-23 10:42:50,967 - models.classifiers.base_classifier - INFO - Initialized git classifier with model size: medium, device: mps
+2025-05-23 10:42:50,967 - models.classifiers.classifier_factory - INFO - Successfully created git classifier
+2025-05-23 10:42:59,015 - __main__ - INFO - Completed pipeline: supervision+git
+2025-05-23 10:42:59,209 - __main__ - INFO - Running pipeline 9/15: ssd+clip
+2025-05-23 10:43:01,468 - models.detectors.ssd - INFO - Loaded pretrained SSD model: ssd_vgg16
+2025-05-23 10:43:01,550 - models.detectors.ssd - INFO - Successfully initialized SSD model on mps
+2025-05-23 10:43:01,550 - models.detectors.base_detector - INFO - Initialized ssd detector with model size: medium, confidence threshold: 0.25, device: mps
+2025-05-23 10:43:01,550 - models.detectors.detector_factory - INFO - Successfully created ssd detector
+2025-05-23 10:43:04,682 - models.classifiers.clip - INFO - Successfully initialized CLIP model 'ViT-B/32' on mps
+2025-05-23 10:43:04,683 - models.classifiers.base_classifier - INFO - Initialized clip classifier with model size: medium, device: mps
+2025-05-23 10:43:04,683 - models.classifiers.classifier_factory - INFO - Successfully created clip classifier
+2025-05-23 10:43:11,957 - __main__ - INFO - Completed pipeline: ssd+clip
+2025-05-23 10:43:12,120 - __main__ - INFO - Running pipeline 10/15: ssd+openclip
+2025-05-23 10:43:14,372 - models.detectors.ssd - INFO - Loaded pretrained SSD model: ssd_vgg16
+2025-05-23 10:43:14,459 - models.detectors.ssd - INFO - Successfully initialized SSD model on mps
+2025-05-23 10:43:14,459 - models.detectors.base_detector - INFO - Initialized ssd detector with model size: medium, confidence threshold: 0.25, device: mps
+2025-05-23 10:43:14,459 - models.detectors.detector_factory - INFO - Successfully created ssd detector
+2025-05-23 10:43:14,460 - root - INFO - Loaded ViT-B-32 model config.
+2025-05-23 10:43:16,442 - root - INFO - Loading pretrained ViT-B-32 weights (laion2b_s34b_b79k).
+2025-05-23 10:43:17,577 - models.classifiers.openclip - INFO - Successfully initialized OpenCLIP model 'ViT-B-32' with pretrained 'laion2b_s34b_b79k' on mps
+2025-05-23 10:43:17,578 - models.classifiers.base_classifier - INFO - Initialized openclip classifier with model size: medium, device: mps
+2025-05-23 10:43:17,578 - models.classifiers.classifier_factory - INFO - Successfully created openclip classifier
+2025-05-23 10:43:21,562 - __main__ - INFO - Progress: 100/150 (66.7%) - ETA: 0:00:46.380460
+2025-05-23 10:43:21,562 - __main__ - INFO - Completed pipeline: ssd+openclip
+2025-05-23 10:43:21,665 - __main__ - INFO - Running pipeline 11/15: ssd+siglip
+2025-05-23 10:43:23,907 - models.detectors.ssd - INFO - Loaded pretrained SSD model: ssd_vgg16
+2025-05-23 10:43:24,032 - models.detectors.ssd - INFO - Successfully initialized SSD model on mps
+2025-05-23 10:43:24,032 - models.detectors.base_detector - INFO - Initialized ssd detector with model size: medium, confidence threshold: 0.25, device: mps
+2025-05-23 10:43:24,032 - models.detectors.detector_factory - INFO - Successfully created ssd detector
+2025-05-23 10:43:26,623 - models.classifiers.siglip - INFO - Successfully initialized SigLIP model 'google/siglip-base-patch16-224' on mps
+2025-05-23 10:43:26,624 - models.classifiers.base_classifier - INFO - Initialized siglip classifier with model size: medium, device: mps
+2025-05-23 10:43:26,624 - models.classifiers.classifier_factory - INFO - Successfully created siglip classifier
+2025-05-23 10:43:31,524 - __main__ - INFO - Completed pipeline: ssd+siglip
+2025-05-23 10:43:31,734 - __main__ - INFO - Running pipeline 12/15: ssd+git
+2025-05-23 10:43:34,007 - models.detectors.ssd - INFO - Loaded pretrained SSD model: ssd_vgg16
+2025-05-23 10:43:34,079 - models.detectors.ssd - INFO - Successfully initialized SSD model on mps
+2025-05-23 10:43:34,079 - models.detectors.base_detector - INFO - Initialized ssd detector with model size: medium, confidence threshold: 0.25, device: mps
+2025-05-23 10:43:34,079 - models.detectors.detector_factory - INFO - Successfully created ssd detector
+2025-05-23 10:43:36,675 - sentence_transformers.SentenceTransformer - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-23 10:43:38,431 - models.classifiers.git - INFO - Successfully initialized GIT model 'microsoft/git-base' and similarity model 'all-MiniLM-L6-v2' on mps
+2025-05-23 10:43:38,431 - models.classifiers.base_classifier - INFO - Initialized git classifier with model size: medium, device: mps
+2025-05-23 10:43:38,431 - models.classifiers.classifier_factory - INFO - Successfully created git classifier
+2025-05-23 10:43:46,390 - __main__ - INFO - Completed pipeline: ssd+git
+2025-05-23 10:43:46,493 - __main__ - INFO - Running pipeline 13/15: owlv2
+2025-05-23 10:43:46,493 - models.end_to_end.owlv2 - INFO - Using model: google/owlv2-base-patch16
+2025-05-23 10:43:48,611 - models.end_to_end.owlv2 - INFO - Successfully initialized OWLv2 model on mps
+2025-05-23 10:43:48,611 - models.end_to_end.base_end_to_end - INFO - Initialized owlv2 end-to-end model with model size: base, confidence threshold: 0.2, device: mps
+2025-05-23 10:43:48,611 - models.end_to_end.end_to_end_factory - INFO - Successfully created owlv2 end-to-end detector
+2025-05-23 10:44:04,040 - __main__ - INFO - Completed pipeline: owlv2
+2025-05-23 10:44:04,281 - __main__ - INFO - Running pipeline 14/15: yolo_world
+2025-05-23 10:44:04,286 - models.end_to_end.yolo_world - INFO - Using model: yolov8m-worldv2.pt
+2025-05-23 10:44:07,140 - models.end_to_end.yolo_world - INFO - Successfully initialized YOLO-World model on mps
+2025-05-23 10:44:07,140 - models.end_to_end.base_end_to_end - INFO - Initialized yolo_world end-to-end model with model size: medium, confidence threshold: 0.25, device: mps
+2025-05-23 10:44:07,141 - models.end_to_end.end_to_end_factory - INFO - Successfully created yolo_world end-to-end detector
+2025-05-23 10:44:11,123 - __main__ - INFO - Completed pipeline: yolo_world
+2025-05-23 10:44:11,344 - __main__ - INFO - Running pipeline 15/15: dino
+2025-05-23 10:44:11,344 - models.end_to_end.grounding_dino - INFO - Using model: IDEA-Research/grounding-dino-tiny
+2025-05-23 10:44:14,676 - models.end_to_end.grounding_dino - INFO - Successfully initialized GroundingDINO model on mps
+2025-05-23 10:44:14,677 - models.end_to_end.base_end_to_end - INFO - Initialized dino end-to-end model with model size: tiny, confidence threshold: 0.3, device: mps
+2025-05-23 10:44:14,677 - models.end_to_end.end_to_end_factory - INFO - Successfully created dino end-to-end detector
+2025-05-23 10:44:25,134 - __main__ - INFO - Progress: 142/150 (94.7%) - ETA: 0:00:08.807487
+2025-05-23 10:44:55,505 - __main__ - INFO - Progress: 150/150 (100.0%) - ETA: 0:00:00
+2025-05-23 10:44:55,508 - __main__ - INFO - Completed pipeline: dino
+2025-05-23 10:44:56,236 - __main__ - INFO - Computing final metrics...
+2025-05-23 10:44:56,270 - utils.evaluation - INFO - Computed overall metrics from 150 predictions
+2025-05-23 10:44:56,286 - utils.evaluation - INFO - Computed metrics for yolov12+clip: 10 predictions
+2025-05-23 10:44:56,298 - utils.evaluation - INFO - Computed metrics for yolov12+openclip: 10 predictions
+2025-05-23 10:44:56,310 - utils.evaluation - INFO - Computed metrics for yolov12+siglip: 10 predictions
+2025-05-23 10:44:56,324 - utils.evaluation - INFO - Computed metrics for yolov12+git: 10 predictions
+2025-05-23 10:44:56,336 - utils.evaluation - INFO - Computed metrics for supervision+clip: 10 predictions
+2025-05-23 10:44:56,345 - utils.evaluation - INFO - Computed metrics for supervision+openclip: 10 predictions
+2025-05-23 10:44:56,356 - utils.evaluation - INFO - Computed metrics for supervision+siglip: 10 predictions
+2025-05-23 10:44:56,368 - utils.evaluation - INFO - Computed metrics for supervision+git: 10 predictions
+2025-05-23 10:44:56,383 - utils.evaluation - INFO - Computed metrics for ssd+clip: 10 predictions
+2025-05-23 10:44:56,396 - utils.evaluation - INFO - Computed metrics for ssd+openclip: 10 predictions
+2025-05-23 10:44:56,408 - utils.evaluation - INFO - Computed metrics for ssd+siglip: 10 predictions
+2025-05-23 10:44:56,421 - utils.evaluation - INFO - Computed metrics for ssd+git: 10 predictions
+2025-05-23 10:44:56,433 - utils.evaluation - INFO - Computed metrics for owlv2: 10 predictions
+2025-05-23 10:44:56,448 - utils.evaluation - INFO - Computed metrics for yolo_world: 10 predictions
+2025-05-23 10:44:56,462 - utils.evaluation - INFO - Computed metrics for dino: 10 predictions
+2025-05-23 10:44:56,464 - __main__ - INFO - Results saved to /Users/lautaro/Desktop/Projects/MBA/zero-shot-vehicle-classification/results/benchmark_results.json
+2025-05-23 10:44:56,464 - __main__ - INFO - Summary saved to /Users/lautaro/Desktop/Projects/MBA/zero-shot-vehicle-classification/results/benchmark_summary.txt
+2025-05-23 10:44:56,464 - __main__ - INFO - Generating visualizations...
+2025-05-23 10:44:56,464 - utils.visualization - INFO - Generating benchmark visualizations...
+2025-05-23 10:44:56,466 - utils.visualization - INFO - Initialized MetricsVisualizer, saving to: /Users/lautaro/Desktop/Projects/MBA/zero-shot-vehicle-classification/results
+2025-05-23 10:44:57,403 - utils.visualization - INFO - Saved accuracy vs speed plot to /Users/lautaro/Desktop/Projects/MBA/zero-shot-vehicle-classification/results/accuracy_vs_speed.png
+2025-05-23 10:44:57,679 - utils.visualization - INFO - Saved timing comparison to /Users/lautaro/Desktop/Projects/MBA/zero-shot-vehicle-classification/results/timing_comparison.png
+2025-05-23 10:44:57,856 - utils.visualization - INFO - Saved confusion matrix for yolov12+clip to /Users/lautaro/Desktop/Projects/MBA/zero-shot-vehicle-classification/results/confusion_matrix_yolov12_clip.png
+2025-05-23 10:44:58,037 - utils.visualization - INFO - Saved confusion matrix for yolov12+openclip to /Users/lautaro/Desktop/Projects/MBA/zero-shot-vehicle-classification/results/confusion_matrix_yolov12_openclip.png
+2025-05-23 10:44:58,198 - utils.visualization - INFO - Saved confusion matrix for yolov12+siglip to /Users/lautaro/Desktop/Projects/MBA/zero-shot-vehicle-classification/results/confusion_matrix_yolov12_siglip.png
+2025-05-23 10:44:58,371 - utils.visualization - INFO - Saved confusion matrix for yolov12+git to /Users/lautaro/Desktop/Projects/MBA/zero-shot-vehicle-classification/results/confusion_matrix_yolov12_git.png
+2025-05-23 10:44:58,545 - utils.visualization - INFO - Saved confusion matrix for supervision+clip to /Users/lautaro/Desktop/Projects/MBA/zero-shot-vehicle-classification/results/confusion_matrix_supervision_clip.png
+2025-05-23 10:44:58,710 - utils.visualization - INFO - Saved confusion matrix for supervision+openclip to /Users/lautaro/Desktop/Projects/MBA/zero-shot-vehicle-classification/results/confusion_matrix_supervision_openclip.png
+2025-05-23 10:44:58,881 - utils.visualization - INFO - Saved confusion matrix for supervision+siglip to /Users/lautaro/Desktop/Projects/MBA/zero-shot-vehicle-classification/results/confusion_matrix_supervision_siglip.png
+2025-05-23 10:44:59,060 - utils.visualization - INFO - Saved confusion matrix for supervision+git to /Users/lautaro/Desktop/Projects/MBA/zero-shot-vehicle-classification/results/confusion_matrix_supervision_git.png
+2025-05-23 10:44:59,251 - utils.visualization - INFO - Saved confusion matrix for ssd+clip to /Users/lautaro/Desktop/Projects/MBA/zero-shot-vehicle-classification/results/confusion_matrix_ssd_clip.png
+2025-05-23 10:44:59,431 - utils.visualization - INFO - Saved confusion matrix for ssd+openclip to /Users/lautaro/Desktop/Projects/MBA/zero-shot-vehicle-classification/results/confusion_matrix_ssd_openclip.png
+2025-05-23 10:44:59,610 - utils.visualization - INFO - Saved confusion matrix for ssd+siglip to /Users/lautaro/Desktop/Projects/MBA/zero-shot-vehicle-classification/results/confusion_matrix_ssd_siglip.png
+2025-05-23 10:44:59,799 - utils.visualization - INFO - Saved confusion matrix for ssd+git to /Users/lautaro/Desktop/Projects/MBA/zero-shot-vehicle-classification/results/confusion_matrix_ssd_git.png
+2025-05-23 10:44:59,978 - utils.visualization - INFO - Saved confusion matrix for owlv2 to /Users/lautaro/Desktop/Projects/MBA/zero-shot-vehicle-classification/results/confusion_matrix_owlv2.png
+2025-05-23 10:45:00,165 - utils.visualization - INFO - Saved confusion matrix for yolo_world to /Users/lautaro/Desktop/Projects/MBA/zero-shot-vehicle-classification/results/confusion_matrix_yolo_world.png
+2025-05-23 10:45:00,353 - utils.visualization - INFO - Saved confusion matrix for dino to /Users/lautaro/Desktop/Projects/MBA/zero-shot-vehicle-classification/results/confusion_matrix_dino.png
+2025-05-23 10:45:00,359 - utils.visualization - INFO - Saved summary table to /Users/lautaro/Desktop/Projects/MBA/zero-shot-vehicle-classification/results/benchmark_summary.csv
+2025-05-23 10:45:00,359 - utils.visualization - INFO - All visualizations saved to /Users/lautaro/Desktop/Projects/MBA/zero-shot-vehicle-classification/results
+2025-05-23 10:45:00,360 - __main__ - INFO - Benchmark completed successfully!
+2025-05-23 10:45:00,360 - __main__ - INFO - Overall Results - Accuracy: 0.653, F1: 0.718

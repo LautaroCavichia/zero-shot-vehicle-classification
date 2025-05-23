@@ -1,414 +1,514 @@
 """
-Main script for the zero-shot vehicle detection and classification benchmark
+Main script for the zero-shot vehicle detection and classification benchmark.
+
+This script orchestrates the entire benchmarking process with proper error handling,
+progress tracking, and streamlined result generation.
 """
 import os
 import argparse
-import time
 import json
+import logging
+import time
 from pathlib import Path
 from datetime import datetime, timedelta
+from typing import Dict, Any, List
 import gc
-import torch
 
-import numpy as np
+import torch
 from tqdm import tqdm
-from scipy import stats
 
 from config import RESULTS_DIR, VEHICLE_CLASSES
 from utils.data_loader import create_dataloader
 from utils.inference import create_pipeline
-from utils.evaluation import BenchmarkEvaluator
+from utils.evaluation import create_evaluator
 from utils.visualization import visualize_results, visualize_detection
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler('benchmark.log')
+    ]
+)
+logger = logging.getLogger(__name__)
 
-def parse_args():
-    """Parse command line arguments"""
-    parser = argparse.ArgumentParser(description='Zero-shot vehicle detection and classification benchmark')
+
+class BenchmarkConfig:
+    """Configuration for benchmark execution."""
     
-    parser.add_argument('--data_dir', type=str, default='data',
-                        help='Path to data directory')
-    parser.add_argument('--results_dir', type=str, default=str(RESULTS_DIR),
-                        help='Path to results directory')
-    parser.add_argument('--limit', type=int, default=None,
-                        help='Limit the number of images to process')
-    parser.add_argument('--save_visualizations', action='store_true',
-                        help='Save detection visualizations')
-    parser.add_argument('--visualize_only', action='store_true',
-                        help='Only generate visualizations from existing results')
-    parser.add_argument('--num_runs', type=int, default=1,
-                        help='Number of times to run the benchmark (default: 1)')
-    
-    return parser.parse_args()
-
-def clear_memory():
-    """Clear cache and force garbage collection between pipeline runs"""
-    gc.collect()
-    if torch.cuda.is_available():
-        torch.cuda.empty_cache()
-    # For Apple Silicon / Metal
-    elif torch.backends.mps.is_available():
-        if hasattr(torch.mps, 'empty_cache'):
-            torch.mps.empty_cache()
-
-
-def run_benchmark(args):
-    """Run the benchmark with all pipelines"""
-    # Create data loader
-    print("Loading dataset...")
-    dataset = create_dataloader()
-    
-    # Define pipelines to benchmark
-    pipelines = [
-        # Detector + Classifier combinations
+    # Default pipeline configurations
+    DETECTOR_CLASSIFIER_PIPELINES = [
         ('yolov12', 'clip'),
         ('yolov12', 'openclip'), 
         ('yolov12', 'siglip'),
         ('yolov12', 'git'),
-        
         ('supervision', 'clip'),
         ('supervision', 'openclip'),
         ('supervision', 'siglip'), 
         ('supervision', 'git'),
-   
         ('ssd', 'clip'),
         ('ssd', 'openclip'),
         ('ssd', 'siglip'),
         ('ssd', 'git'),
-
-        # End-to-end models 
+    ]
+    
+    END_TO_END_PIPELINES = [
         ('owlv2', None),        
         ('yolo_world', None),   
         ('dino', None),         
     ]
     
-     # Create evaluator for overall results
-    overall_evaluator = BenchmarkEvaluator()
-    
-    # Limit number of images if specified
-    num_images = min(len(dataset), args.limit) if args.limit else len(dataset)
-    
-    # Create results directory if it doesn't exist
-    os.makedirs(args.results_dir, exist_ok=True)
-    
-    # Store results for all runs
-    all_runs_metrics = []
-    
-    # Progress tracking
-    start_time = datetime.now()
-    total_iterations = args.num_runs * len(pipelines) * num_images
-    completed_iterations = 0
-    
-    # Run benchmark for specified number of runs
-    for run in range(args.num_runs):
-        print(f"\n{'='*50}")
-        print(f"Run {run + 1}/{args.num_runs}")
-        print(f"{'='*50}")
-        
-        # Create evaluator for this run
-        run_evaluator = BenchmarkEvaluator()
-        
-        # Run benchmark for each pipeline
-        for pipeline_idx, (detector_name, classifier_name) in enumerate(pipelines):
-            pipeline_name = f"{detector_name}+{classifier_name}" if classifier_name else detector_name
-            print(f"\nRunning benchmark with pipeline: {pipeline_name}")
-            
-            try:
-                # Create pipeline
-                pipeline = create_pipeline(detector_name, classifier_name)
-                
-                # Process each image
-                for i in tqdm(range(num_images), desc=f"Processing images with {pipeline_name}"):
-                    # Load image
-                    image, image_path = dataset.load_image(i)
-                    
-                    # Get ground truth annotations
-                    annotations = dataset.get_annotations(i)
-                    
-                    # Run inference
-                    prediction = pipeline.process_image(image)
-                    
-                    # Evaluate prediction for both evaluators
-                    result = run_evaluator.evaluate_prediction(prediction, annotations)
-                    overall_evaluator.evaluate_prediction(prediction, annotations)
-                    
-                    # Save visualization if requested (only on first run to avoid duplicates)
-                    if args.save_visualizations and run == 0:
-                        vis_dir = Path(args.results_dir) / 'visualizations' / pipeline_name
-                        os.makedirs(vis_dir, exist_ok=True)
-                        
-                        image_name = Path(image_path).name
-                        vis_path = vis_dir / f"{Path(image_name).stem}_pred.png"
-                        
-                        visualize_detection(image, prediction, str(vis_path))
-                    
-                    # Update progress
-                    completed_iterations += 1
-                    if completed_iterations % 100 == 0:  # Update every 50 iterations to reduce overhead
-                        elapsed_time = datetime.now() - start_time
-                        iterations_per_second = completed_iterations / elapsed_time.total_seconds()
-                        remaining_iterations = total_iterations - completed_iterations
-                        
-                        if iterations_per_second > 0:
-                            estimated_remaining = timedelta(seconds=remaining_iterations / iterations_per_second)
-                            print(f"\nOverall Progress: {completed_iterations}/{total_iterations} "
-                                  f"({completed_iterations/total_iterations*100:.1f}%), "
-                                  f"ETA: {estimated_remaining}")
-                    
-            except Exception as e:  
-                print(f"Error running pipeline {pipeline_name}: {e}")
-                continue
-            
-            finally:
-                clear_memory()
-        
-        # Compute metrics for this run
-        run_metrics = run_evaluator.compute_metrics()
-        all_runs_metrics.append(run_metrics)
-        
-        # Save individual run results
-        run_results_file = Path(args.results_dir) / f'benchmark_results_run_{run + 1}.json'
-        with open(run_results_file, 'w') as f:
-            json.dump(run_metrics, f, indent=2)
-    
-    # Compute overall metrics (averaged across all runs)
-    print("\nComputing overall metrics...")
-    overall_metrics = overall_evaluator.compute_metrics()
-    
-    # Save overall metrics
-    results_file = Path(args.results_dir) / 'benchmark_results.json'
-    with open(results_file, 'w') as f:
-        json.dump(overall_metrics, f, indent=2)
-    
-    # Save averaged metrics if multiple runs
-    if args.num_runs > 1:
-        averaged_metrics = average_metrics(all_runs_metrics)
-        averaged_results_file = Path(args.results_dir) / 'benchmark_results_averaged.json'
-        with open(averaged_results_file, 'w') as f:
-            json.dump(averaged_metrics, f, indent=2)
-        print(f"Averaged results saved to {averaged_results_file}")
-        
-        # Perform statistical analysis
-        statistical_results = analyze_statistical_significance(all_runs_metrics)
-        stats_file = Path(args.results_dir) / 'statistical_analysis.json'
-        with open(stats_file, 'w') as f:
-            json.dump(statistical_results, f, indent=2)
-        print(f"Statistical analysis saved to {stats_file}")
-        
-        # Create human-readable summary
-        create_statistical_summary(statistical_results, args.results_dir)
-    
-    print(f"Overall results saved to {results_file}")
-    
-    # Visualize results
-    print("\nGenerating visualizations...")
-    visualize_results(overall_metrics, args.results_dir)
-    
-    # Print summary
-    print("\n" + "="*50)
-    print("BENCHMARK COMPLETED")
-    print(f"Total time: {datetime.now() - start_time}")
-    print(f"Total iterations: {completed_iterations}")
-    print("="*50)
-    
-    
-def analyze_statistical_significance(all_runs_metrics):
-    """Perform statistical analysis between pipelines"""
-    results = {}
-    
-    # Get pipeline names (excluding 'all' if it exists)
-    pipelines = list(all_runs_metrics[0].keys())
-    pipelines = [p for p in pipelines if p != 'all']
-    
-    # Collect accuracy data for each pipeline
-    pipeline_accuracies = {}
-    for pipeline in pipelines:
-        accuracies = []
-        for run in all_runs_metrics:
-            if pipeline in run and 'accuracy' in run[pipeline]:
-                accuracies.append(run[pipeline]['accuracy'])
-        pipeline_accuracies[pipeline] = accuracies
-    
-    # Perform pairwise t-tests
-    for i, pipeline1 in enumerate(pipelines):
-        for pipeline2 in pipelines[i+1:]:
-            acc1 = pipeline_accuracies[pipeline1]
-            acc2 = pipeline_accuracies[pipeline2]
-            
-            if len(acc1) > 1 and len(acc2) > 1:
-                t_stat, p_value = stats.ttest_ind(acc1, acc2)
-                
-                comparison_key = f"{pipeline1}_vs_{pipeline2}"
-                results[comparison_key] = {
-                    't_statistic': float(t_stat),
-                    'p_value': float(p_value),
-                    'significant': bool(p_value < 0.05),
-                    'mean_diff': float(np.mean(acc1) - np.mean(acc2)),
-                    'pipeline1_mean': float(np.mean(acc1)),
-                    'pipeline1_std': float(np.std(acc1)),
-                    'pipeline2_mean': float(np.mean(acc2)),
-                    'pipeline2_std': float(np.std(acc2))
-                }
-    
-    # Add ANOVA test for all pipelines
-    if len(pipelines) > 2 and all(len(pipeline_accuracies[p]) > 1 for p in pipelines):
-        accuracy_arrays = [pipeline_accuracies[p] for p in pipelines]
-        f_stat, p_value = stats.f_oneway(*accuracy_arrays)
-        
-        results['anova'] = {
-            'f_statistic': float(f_stat),
-            'p_value': float(p_value),
-            'significant': bool(p_value < 0.05),
-            'pipelines': pipelines
-        }
-    
-    # Find best performing pipeline
-    mean_accuracies = {p: np.mean(accs) for p, accs in pipeline_accuracies.items() if len(accs) > 0}
-    if mean_accuracies:
-        best_pipeline = max(mean_accuracies.items(), key=lambda x: x[1])
-        results['best_pipeline'] = {
-            'name': best_pipeline[0],
-            'mean_accuracy': float(best_pipeline[1]),
-            'std_accuracy': float(np.std(pipeline_accuracies[best_pipeline[0]]))
-        }
-    
-    return results
-    
-    
-def average_metrics(all_runs_metrics):
-    """Average metrics across multiple runs"""
-    if not all_runs_metrics:
-        return {}
-    
-    averaged = {}
-    
-    # Get all pipelines present in all runs
-    all_pipelines = set()
-    for run_metrics in all_runs_metrics:
-        all_pipelines.update(run_metrics.keys())
-    
-    # Average metrics for each pipeline
-    for pipeline in all_pipelines:
-        pipeline_metrics = []
-        for run_metrics in all_runs_metrics:
-            if pipeline in run_metrics:
-                pipeline_metrics.append(run_metrics[pipeline])
-        
-        if not pipeline_metrics:
-            continue
-        
-        # Average numeric metrics
-        averaged[pipeline] = {}
-        numeric_keys = ['accuracy', 'macro_f1', 'weighted_f1', 'avg_confidence', 
-                       'avg_detection_time', 'avg_classification_time', 'avg_total_time']
-        
-        for key in numeric_keys:
-            values = [m[key] for m in pipeline_metrics if key in m]
-            if values:
-                averaged[pipeline][key] = float(np.mean(values))
-                averaged[pipeline][f'{key}_std'] = float(np.std(values))
-                averaged[pipeline][f'{key}_min'] = float(np.min(values))
-                averaged[pipeline][f'{key}_max'] = float(np.max(values))
-                averaged[pipeline][f'{key}_median'] = float(np.median(values))
-        
-        # Handle count
-        if 'count' in pipeline_metrics[0]:
-            averaged[pipeline]['count'] = pipeline_metrics[0]['count']
-        
-        # Average class metrics
-        if 'class_metrics' in pipeline_metrics[0]:
-            class_metrics = {}
-            all_classes = set()
-            for m in pipeline_metrics:
-                if 'class_metrics' in m:
-                    all_classes.update(m['class_metrics'].keys())
-            
-            for cls in all_classes:
-                class_metrics[cls] = {}
-                for metric in ['precision', 'recall', 'f1']:
-                    values = []
-                    for m in pipeline_metrics:
-                        if 'class_metrics' in m and cls in m['class_metrics']:
-                            values.append(m['class_metrics'][cls][metric])
-                    if values:
-                        class_metrics[cls][metric] = float(np.mean(values))
-                        class_metrics[cls][f'{metric}_std'] = float(np.std(values))
-            
-            averaged[pipeline]['class_metrics'] = class_metrics
-        
-        # Add run information
-        averaged[pipeline]['num_runs'] = len(pipeline_metrics)
-    
-    return averaged
+    @classmethod
+    def get_all_pipelines(cls) -> List[tuple]:
+        """Get all configured pipelines."""
+        return cls.DETECTOR_CLASSIFIER_PIPELINES + cls.END_TO_END_PIPELINES
 
-def create_statistical_summary(statistical_results, output_dir):
-    """Create a human-readable statistical summary"""
-    summary_file = Path(output_dir) / 'statistical_summary.txt'
-    
-    with open(summary_file, 'w') as f:
-        f.write("Statistical Analysis Summary\n")
-        f.write("==========================\n\n")
-        
-        # Best pipeline
-        if 'best_pipeline' in statistical_results:
-            best = statistical_results['best_pipeline']
-            f.write(f"Best Performing Pipeline: {best['name']}\n")
-            f.write(f"Mean Accuracy: {best['mean_accuracy']:.4f} ± {best['std_accuracy']:.4f}\n\n")
-        
-        # ANOVA results
-        if 'anova' in statistical_results:
-            anova = statistical_results['anova']
-            f.write("ANOVA Test Results:\n")
-            f.write(f"F-statistic: {anova['f_statistic']:.4f}\n")
-            f.write(f"p-value: {anova['p_value']:.6f}\n")
-            f.write(f"Significant differences between pipelines: {'Yes' if anova['significant'] else 'No'}\n\n")
-        
-        # Pairwise comparisons
-        f.write("Pairwise Comparisons (t-tests):\n")
-        f.write("-" * 40 + "\n")
-        
-        for comparison, data in statistical_results.items():
-            if comparison not in ['anova', 'best_pipeline']:
-                pipelines = comparison.split('_vs_')
-                f.write(f"\n{pipelines[0]} vs {pipelines[1]}:\n")
-                f.write(f"  Mean accuracy difference: {data['mean_diff']:.4f}\n")
-                f.write(f"  t-statistic: {data['t_statistic']:.4f}\n")
-                f.write(f"  p-value: {data['p_value']:.6f}\n")
-                f.write(f"  Significantly different: {'Yes' if data['significant'] else 'No'}\n")
-                f.write(f"  {pipelines[0]}: {data['pipeline1_mean']:.4f} ± {data['pipeline1_std']:.4f}\n")
-                f.write(f"  {pipelines[1]}: {data['pipeline2_mean']:.4f} ± {data['pipeline2_std']:.4f}\n")
-    
-    print(f"Statistical summary saved to {summary_file}")
 
-def visualize_from_results(args):
-    """Generate visualizations from existing results"""
-    # Path to stored results
+class MemoryManager:
+    """Handles memory management during benchmark execution."""
+    
+    @staticmethod
+    def clear_cache():
+        """Clear GPU and system caches."""
+        gc.collect()
+        
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        elif torch.backends.mps.is_available():
+            if hasattr(torch.mps, 'empty_cache'):
+                torch.mps.empty_cache()
+
+
+class ProgressTracker:
+    """Tracks and reports benchmark progress."""
+    
+    def __init__(self, total_iterations: int):
+        """
+        Initialize progress tracker.
+        
+        Args:
+            total_iterations: Total number of iterations expected
+        """
+        self.total_iterations = total_iterations
+        self.completed_iterations = 0
+        self.start_time = datetime.now()
+        self.last_update = self.start_time
+        
+    def update(self, increment: int = 1) -> None:
+        """
+        Update progress and log if necessary.
+        
+        Args:
+            increment: Number of iterations to add
+        """
+        self.completed_iterations += increment
+        current_time = datetime.now()
+        
+        # Log progress every 50 iterations or every minute
+        if (self.completed_iterations % 50 == 0 or 
+            (current_time - self.last_update).total_seconds() > 60):
+            
+            self._log_progress()
+            self.last_update = current_time
+    
+    def _log_progress(self) -> None:
+        """Log current progress with ETA."""
+        elapsed_time = datetime.now() - self.start_time
+        progress_percent = (self.completed_iterations / self.total_iterations) * 100
+        
+        if self.completed_iterations > 0:
+            avg_time_per_iteration = elapsed_time.total_seconds() / self.completed_iterations
+            remaining_iterations = self.total_iterations - self.completed_iterations
+            eta = timedelta(seconds=remaining_iterations * avg_time_per_iteration)
+            
+            logger.info(f"Progress: {self.completed_iterations}/{self.total_iterations} "
+                       f"({progress_percent:.1f}%) - ETA: {eta}")
+
+
+class BenchmarkRunner:
+    """Main benchmark execution class."""
+    
+    def __init__(self, args: argparse.Namespace):
+        """
+        Initialize benchmark runner.
+        
+        Args:
+            args: Parsed command line arguments
+        """
+        self.args = args
+        self.config = BenchmarkConfig()
+        self.memory_manager = MemoryManager()
+        
+        # Create results directory
+        self.results_dir = Path(args.results_dir)
+        self.results_dir.mkdir(exist_ok=True)
+        
+        logger.info(f"Initialized BenchmarkRunner with results dir: {self.results_dir}")
+    
+    def run_benchmark(self) -> Dict[str, Any]:
+        """
+        Execute the complete benchmark.
+        
+        Returns:
+            Dictionary containing all benchmark results
+        """
+        try:
+            logger.info("Starting benchmark execution...")
+            
+            # Load dataset
+            dataset = self._load_dataset()
+            
+            # Determine number of images to process
+            num_images = min(len(dataset), self.args.limit) if self.args.limit else len(dataset)
+            logger.info(f"Processing {num_images} images")
+            
+            # Get pipelines to test
+            pipelines = self.config.get_all_pipelines()
+            
+            # Initialize progress tracking
+            total_iterations = len(pipelines) * num_images
+            progress_tracker = ProgressTracker(total_iterations)
+            
+            # Initialize evaluator
+            evaluator = create_evaluator()
+            
+            # Run benchmark for each pipeline
+            for pipeline_idx, (detector_name, classifier_name) in enumerate(pipelines):
+                pipeline_name = f"{detector_name}+{classifier_name}" if classifier_name else detector_name
+                
+                logger.info(f"Running pipeline {pipeline_idx + 1}/{len(pipelines)}: {pipeline_name}")
+                
+                try:
+                    self._run_pipeline(
+                        detector_name, classifier_name, dataset, num_images, 
+                        evaluator, progress_tracker
+                    )
+                except Exception as e:
+                    logger.error(f"Pipeline {pipeline_name} failed: {e}")
+                    continue
+                finally:
+                    self.memory_manager.clear_cache()
+            
+            # Compute final metrics
+            logger.info("Computing final metrics...")
+            metrics = evaluator.compute_metrics()
+            
+            # Save results
+            self._save_results(metrics)
+            
+            # Generate visualizations
+            logger.info("Generating visualizations...")
+            visualize_results(metrics, str(self.results_dir))
+            
+            return metrics
+            
+        except Exception as e:
+            logger.error(f"Benchmark execution failed: {e}")
+            raise
+    
+    def _load_dataset(self) -> Any:
+        """Load and validate the dataset."""
+        try:
+            logger.info("Loading dataset...")
+            dataset = create_dataloader()
+            
+            # Log dataset statistics
+            stats = dataset.get_dataset_statistics()
+            logger.info(f"Dataset loaded successfully:")
+            logger.info(f"  - Total images: {stats.get('total_images', 0)}")
+            logger.info(f"  - Total annotations: {stats.get('total_annotations', 0)}")
+            logger.info(f"  - Class distribution: {stats.get('class_distribution', {})}")
+            
+            return dataset
+            
+        except Exception as e:
+            logger.error(f"Failed to load dataset: {e}")
+            raise
+    
+    def _run_pipeline(self, 
+                     detector_name: str, 
+                     classifier_name: str, 
+                     dataset: Any, 
+                     num_images: int,
+                     evaluator: Any,
+                     progress_tracker: ProgressTracker) -> None:
+        """
+        Run a single pipeline on the dataset.
+        
+        Args:
+            detector_name: Name of the detector
+            classifier_name: Name of the classifier (None for end-to-end)
+            dataset: Dataset instance
+            num_images: Number of images to process
+            evaluator: Benchmark evaluator
+            progress_tracker: Progress tracking instance
+        """
+        pipeline_name = f"{detector_name}+{classifier_name}" if classifier_name else detector_name
+        
+        try:
+            # Create pipeline
+            pipeline = create_pipeline(detector_name, classifier_name)
+            
+            # Process images with progress bar
+            with tqdm(range(num_images), desc=f"Processing {pipeline_name}") as pbar:
+                for i in pbar:
+                    try:
+                        # Load image and annotations
+                        image, image_path = dataset.load_image(i)
+                        annotations = dataset.get_annotations(i)
+                        
+                        # Run inference
+                        prediction = pipeline.process_image(image)
+                        
+                        # Evaluate prediction
+                        evaluator.evaluate_prediction(prediction, annotations)
+                        
+                        # Save visualization if requested
+                        if self.args.save_visualizations:
+                            self._save_visualization(
+                                image, prediction, image_path, pipeline_name, i
+                            )
+                        
+                        # Update progress
+                        progress_tracker.update()
+                        
+                    except Exception as e:
+                        logger.warning(f"Failed to process image {i} with {pipeline_name}: {e}")
+                        continue
+            
+            logger.info(f"Completed pipeline: {pipeline_name}")
+            
+        except Exception as e:
+            logger.error(f"Failed to initialize pipeline {pipeline_name}: {e}")
+            raise
+    
+    def _save_visualization(self, 
+                          image: Any, 
+                          prediction: Dict[str, Any], 
+                          image_path: str, 
+                          pipeline_name: str, 
+                          image_idx: int) -> None:
+        """
+        Save visualization for a prediction.
+        
+        Args:
+            image: Input image
+            prediction: Prediction results
+            image_path: Path to original image
+            pipeline_name: Name of the pipeline
+            image_idx: Image index
+        """
+        try:
+            # Create visualization directory
+            vis_dir = self.results_dir / 'visualizations' / pipeline_name
+            vis_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Generate visualization filename
+            image_name = Path(image_path).stem
+            vis_path = vis_dir / f"{image_name}_{image_idx:04d}_pred.png"
+            
+            # Create visualization
+            visualize_detection(image, prediction, str(vis_path))
+            
+        except Exception as e:
+            logger.warning(f"Failed to save visualization for image {image_idx}: {e}")
+    
+    def _save_results(self, metrics: Dict[str, Any]) -> None:
+        """
+        Save benchmark results to file.
+        
+        Args:
+            metrics: Computed metrics dictionary
+        """
+        try:
+            # Save comprehensive results
+            results_file = self.results_dir / 'benchmark_results.json'
+            with open(results_file, 'w') as f:
+                json.dump(metrics, f, indent=2, default=str)
+            
+            logger.info(f"Results saved to {results_file}")
+            
+            # Save human-readable summary
+            self._save_summary(metrics)
+            
+        except Exception as e:
+            logger.error(f"Failed to save results: {e}")
+    
+    def _save_summary(self, metrics: Dict[str, Any]) -> None:
+        """
+        Save a human-readable summary of results.
+        
+        Args:
+            metrics: Computed metrics dictionary
+        """
+        try:
+            summary_file = self.results_dir / 'benchmark_summary.txt'
+            
+            with open(summary_file, 'w') as f:
+                f.write("Zero-Shot Vehicle Detection Benchmark Results\n")
+                f.write("=" * 50 + "\n\n")
+                
+                # Pipeline results
+                pipeline_names = [name for name in metrics.keys() if name != 'overall']
+                
+                if pipeline_names:
+                    f.write("Pipeline Performance Summary:\n")
+                    f.write("-" * 30 + "\n")
+                    
+                    # Sort by accuracy
+                    sorted_pipelines = sorted(
+                        pipeline_names,
+                        key=lambda x: metrics[x].get('accuracy', 0),
+                        reverse=True
+                    )
+                    
+                    for pipeline in sorted_pipelines:
+                        pipeline_metrics = metrics[pipeline]
+                        f.write(f"\n{pipeline}:\n")
+                        f.write(f"  Accuracy: {pipeline_metrics.get('accuracy', 0):.3f}\n")
+                        f.write(f"  Weighted F1: {pipeline_metrics.get('weighted_f1', 0):.3f}\n")
+                        f.write(f"  Avg Total Time: {pipeline_metrics.get('avg_total_time', 0):.3f}s\n")
+                        f.write(f"  Count: {pipeline_metrics.get('count', 0)}\n")
+                
+                # Overall statistics
+                if 'overall' in metrics:
+                    overall = metrics['overall']
+                    f.write(f"\n\nOverall Statistics:\n")
+                    f.write("-" * 20 + "\n")
+                    f.write(f"Total Predictions: {overall.get('count', 0)}\n")
+                    f.write(f"Overall Accuracy: {overall.get('accuracy', 0):.3f}\n")
+                    f.write(f"Overall F1: {overall.get('weighted_f1', 0):.3f}\n")
+                
+                f.write(f"\n\nGenerated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+            
+            logger.info(f"Summary saved to {summary_file}")
+            
+        except Exception as e:
+            logger.error(f"Failed to save summary: {e}")
+
+
+def parse_arguments() -> argparse.Namespace:
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(
+        description='Zero-shot vehicle detection and classification benchmark',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+    
+    parser.add_argument(
+        '--data_dir', type=str, default='data',
+        help='Path to data directory containing images and annotations'
+    )
+    parser.add_argument(
+        '--results_dir', type=str, default=str(RESULTS_DIR),
+        help='Path to results directory for saving outputs'
+    )
+    parser.add_argument(
+        '--limit', type=int, default=None,
+        help='Limit the number of images to process (useful for testing)'
+    )
+    parser.add_argument(
+        '--save_visualizations', action='store_true',
+        help='Save detection visualizations for each prediction'
+    )
+    parser.add_argument(
+        '--visualize_only', action='store_true',
+        help='Only generate visualizations from existing results'
+    )
+    parser.add_argument(
+        '--log_level', type=str, default='ERROR',
+        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'],
+        help='Set logging level'
+    )
+    
+    return parser.parse_args()
+
+
+def setup_environment(args: argparse.Namespace) -> None:
+    """
+    Set up the execution environment.
+    
+    Args:
+        args: Parsed command line arguments
+    """
+    # Set logging level
+    logging.getLogger().setLevel(getattr(logging, args.log_level))
+    
+    # Set environment variables for compatibility
+    os.environ['PYTORCH_ENABLE_MPS_FALLBACK'] = '1'
+    
+    # Log system information
+    logger.info(f"Python executable: {os.sys.executable}")
+    logger.info(f"Working directory: {os.getcwd()}")
+    
+    # Log device availability
+    if torch.cuda.is_available():
+        logger.info(f"CUDA available: {torch.cuda.device_count()} devices")
+    elif torch.backends.mps.is_available():
+        logger.info("MPS (Apple Silicon) available")
+    else:
+        logger.info("Using CPU only")
+
+
+def visualize_from_existing_results(args: argparse.Namespace) -> None:
+    """
+    Generate visualizations from existing results.
+    
+    Args:
+        args: Parsed command line arguments
+    """
     results_file = Path(args.results_dir) / 'benchmark_results.json'
     
     if not results_file.exists():
-        print(f"Results file not found: {results_file}")
+        logger.error(f"Results file not found: {results_file}")
         return
     
-    # Load metrics
-    with open(results_file, 'r') as f:
-        metrics = json.load(f)
-    
-    # Visualize results
-    print("Generating visualizations...")
-    visualize_results(metrics, args.results_dir)
+    try:
+        # Load existing results
+        with open(results_file, 'r') as f:
+            metrics = json.load(f)
+        
+        logger.info("Generating visualizations from existing results...")
+        visualize_results(metrics, args.results_dir)
+        logger.info("Visualization generation completed")
+        
+    except Exception as e:
+        logger.error(f"Failed to generate visualizations: {e}")
 
 
-def main():
-    """Main function"""
-    args = parse_args()
+def main() -> None:
+    """Main entry point."""
+    try:
+        # Parse arguments and setup environment
+        args = parse_arguments()
+        setup_environment(args)
+        
+        logger.info("Starting Zero-Shot Vehicle Detection Benchmark")
+        logger.info(f"Arguments: {vars(args)}")
+        
+        if args.visualize_only:
+            # Only generate visualizations
+            visualize_from_existing_results(args)
+        else:
+            # Run full benchmark
+            runner = BenchmarkRunner(args)
+            metrics = runner.run_benchmark()
+            
+            logger.info("Benchmark completed successfully!")
+            
+            # Print quick summary
+            if 'overall' in metrics:
+                overall = metrics['overall']
+                logger.info(f"Overall Results - Accuracy: {overall.get('accuracy', 0):.3f}, "
+                           f"F1: {overall.get('weighted_f1', 0):.3f}")
     
-    # Set environment variables for Apple Silicon compatibility
-    os.environ['PYTORCH_ENABLE_MPS_FALLBACK'] = '1'
-    
-    if args.visualize_only:
-        visualize_from_results(args)
-    else:
-        run_benchmark(args)
+    except KeyboardInterrupt:
+        logger.info("Benchmark interrupted by user")
+    except Exception as e:
+        logger.error(f"Benchmark failed: {e}")
+        raise
 
 
 if __name__ == '__main__':
-    main()
+    main()  
