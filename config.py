@@ -20,6 +20,7 @@ RESULTS_DIR.mkdir(exist_ok=True)
 
 # Vehicle classes for zero-shot classification (updated with new classes)
 VEHICLE_CLASSES = ["city_car", "large_suv", "van", "truck", "bus", "motorcycle", "non-vehicle"]
+YOLO_WORLD_CLASSES = ["car", "suv", "van", "truck", "bus", "motorcycle", "person"]
 
 # COCO category mapping for annotations (updated for new classes)
 # Maps COCO category IDs to standardized vehicle class names
@@ -39,97 +40,112 @@ VEHICLE_CLASS_TO_COCO_ID = {v: k for k, v in COCO_CATEGORY_MAPPING.items()}
 # CLIP text templates for enhanced zero-shot performance
 CLIP_TEMPLATES = [
     "a photo of a {}.",
-    "a picture of a {}.", 
-    "a close-up photo of a {}.",
-    "a side view photo of a {}.",
+    "a side view of a {}.",
     "a cctv image of a {}.",
-    "a traffic camera image of a {}.",
+    "a traffic camera photo of a {}.",
+    "a road surveillance image of a {}.",
     "an image showing a {}.",
 ]
 
 # Class-specific text descriptions for enhanced classification
 CLASS_DESCRIPTIONS = {
     "city_car": [
-        "a small city car",
-        "a compact urban vehicle",
-        "a small sedan",
-        "a hatchback car",
-        "a mini car",
+        "a small city car on the road",
+        "a compact car in traffic",
+        "a small sedan driving",
+        "a hatchback vehicle",
+        "a station wagon car",
         "a small passenger car",
-        "a compact automobile",
+        "a compact automobile on street",
         "a small family car",
-        "an economy car",
-        "a subcompact car",
+        "an economy car on road",
+        "a subcompact vehicle",
+        "a city hatchback",
+        "a small station wagon",
     ],
     "large_suv": [
-        "a large SUV",
-        "a big sport utility vehicle", 
-        "a full-size SUV",
-        "a luxury SUV",
+        "a large SUV on the road",
+        "a big sport utility vehicle driving", 
+        "a full-size SUV in traffic",
+        "a luxury SUV on street",
         "a large 4x4 vehicle",
         "a big family SUV",
-        "a premium SUV",
-        "a large crossover",
-        "a spacious SUV",
+        "a premium SUV driving",
+        "a large crossover vehicle",
+        "a spacious SUV on road",
         "a heavy-duty SUV",
+        "a pickup truck vehicle",
+        "a pickup SUV driving",
     ],
     "van": [
-        "a delivery van",
-        "a commercial van", 
-        "a minivan",
-        "a panel van for deliveries",
-        "a cargo van",
-        "a utility van",
-        "a work van",
-        "a passenger van",
+        "a van on the road",
+        "a delivery van driving",
+        "a commercial van in traffic", 
+        "a minivan on street",
+        "a panel van vehicle",
+        "a cargo van driving",
+        "a utility van on road",
+        "a work van in traffic",
+        "a passenger van driving",
+        "a service van vehicle",
     ],
     "truck": [
-        "a pickup truck",
-        "a heavy-duty truck",
-        "a cargo truck",
-        "a utility truck", 
-        "a box truck",
-        "a freight truck",
-        "a commercial truck",
-        "a delivery truck",
-        "a work truck",
+        "a truck on the road",
+        "a heavy-duty truck driving",
+        "a cargo truck in traffic",
+        "a freight truck on street", 
+        "a box truck vehicle",
+        "a commercial truck driving",
+        "a delivery truck on road",
+        "a work truck in traffic",
+        "a large truck vehicle",
+        "a transport truck driving",
     ],
     "bus": [
-        "a public transit bus",
-        "a large passenger bus",
-        "a school bus",
-        "a coach bus",
-        "a city bus",
-        "a public bus",
-        "a passenger bus",
-        "a tour bus",
+        "a bus on the road",
+        "a public transit bus driving",
+        "a large passenger bus in traffic",
+        "a school bus on street",
+        "a coach bus vehicle",
+        "a city bus driving",
+        "a public bus on road",
+        "a passenger bus in traffic",
+        "a tour bus vehicle",
+        "a transit bus driving",
     ],
     "motorcycle": [
-        "a motorcycle",
-        "a motorbike",
-        "a bike with motor",
-        "a two-wheeled vehicle",
-        "a motor scooter",
-        "a sport bike",
-        "a touring motorcycle",
-        "a street bike",
-        "a cruiser motorcycle",
-        "a dirt bike",
+        "a motorcycle on the road",
+        "a motorbike driving",
+        "a bike with motor in traffic",
+        "a two-wheeled vehicle on street",
+        "a motor scooter driving",
+        "a sport bike on road",
+        "a touring motorcycle in traffic",
+        "a street bike driving",
+        "a cruiser motorcycle on road",
+        "a scooter vehicle",
+        "a motorbike with person driving",
+        "a person riding a motorcycle",
+        "a motorcycle and rider in traffic",
+        "a motor scooter with driver",
     ],
     "non-vehicle": [
-        "a person walking",
-        "a pedestrian",
-        "people on the street",
-        "no vehicles present",
-        "an empty road",
-        "pedestrians",
-        "people",
-        "a cyclist",
-        "a bicycle",
+        "a person walking on the road",
+        "a pedestrian on the street",
+        "people walking in the area",
+        "a person standing on road",
+        "pedestrians on the street",
+        "people in the scene",
+        "a person on foot",
+        "a cyclist with bicycle",
+        "a person with bike",
+        "pedestrians in traffic area",
+        "people near vehicles",
+        "a person in the image",
     ],
 }
 
-# Detection model configurations
+# Detection model configurations - UPDATED TO INCLUDE PERSON CLASS
 DETECTOR_CONFIGS = {
     "yolov12": {
         "model_sizes": {
@@ -140,8 +156,8 @@ DETECTOR_CONFIGS = {
         "default_model_size": "medium",
         "confidence_threshold": 0.25,
         "device_preference": ["cuda", "mps", "cpu"],
-        # COCO class IDs for vehicles (car, motorcycle, bus, truck, train)
-        "vehicle_class_ids": [2, 3, 5, 7, 8],
+        # COCO class IDs: person, bicycle, car, motorcycle, bus, truck, train
+        "vehicle_class_ids": [0, 1, 2, 3, 5, 7],
     },
     "supervision": {
         "model_sizes": {
@@ -152,7 +168,8 @@ DETECTOR_CONFIGS = {
         "default_model_size": "medium", 
         "confidence_threshold": 0.25,
         "device_preference": ["cuda", "mps", "cpu"],
-        "vehicle_class_ids": [2, 3, 5, 7, 8],
+        # COCO class IDs: person, bicycle, car, motorcycle, bus, truck, train
+        "vehicle_class_ids": [0, 1, 2, 3, 5, 7],
     },
     "ssd": {
         "model_sizes": {
@@ -162,7 +179,7 @@ DETECTOR_CONFIGS = {
         "default_model_size": "medium",
         "confidence_threshold": 0.25, 
         "device_preference": ["cuda", "mps", "cpu"],
-        "vehicle_class_ids": [2, 3, 5, 7, 8],
+        "vehicle_class_ids": [1, 2, 3, 4, 6, 7, 8],
     },
 }
 
@@ -253,12 +270,14 @@ END_TO_END_CONFIGS = {
     }
 }
 
-# Main vehicle scoring parameters (consistent across all models)
+# Main vehicle scoring parameters - UPDATED WITH VERTICAL/HORIZONTAL WEIGHTING
 MAIN_VEHICLE_SCORING = {
-    "centrality_weight": 0.8,      # Weight for distance from center
-    "size_weight": 0.2,            # Weight for object size
-    "min_area_threshold": 120,     # Minimum bounding box area in pixels
+    "centrality_weight": 0.7,      # Weight for distance from center
+    "size_weight": 0.3,            # Weight for object size
+    "min_area_threshold": 150,     # Minimum bounding box area in pixels
     "max_distance_threshold": 0.7, # Maximum normalized distance from center
+    "vertical_centrality_weight": 0.6,    # 60% weight to vertical centrality
+    "horizontal_centrality_weight": 0.4,  # 40% weight to horizontal centrality
 }
 
 # Image preprocessing configuration (DISABLED)

@@ -1,5 +1,5 @@
 """
-Inference utilities for the zero-shot vehicle benchmark
+Inference utilities for the zero-shot vehicle benchmark - Fixed to let classifier do its job
 """
 import time
 from typing import Dict, List, Tuple, Any, Callable
@@ -59,78 +59,78 @@ class InferencePipeline:
             self.classifier_name = classifier_name
     
     def process_image(self, image: np.ndarray) -> Dict[str, Any]:
-            """
-            Process an image through the pipeline
+        """
+        Process an image through the pipeline
+        
+        Args:
+            image: Input image (RGB format, numpy array)
             
-            Args:
-                image: Input image (RGB format, numpy array)
-                
-            Returns:
-                Dict with results including timing information
-            """
-            start_time = time.time()
+        Returns:
+            Dict with results including timing information
+        """
+        start_time = time.time()
+        
+        # REMOVED: image = enhance_image(image)
+        
+        if self.end_to_end:
+            # Run end-to-end model
+            results, inference_time = self.model.detect_and_classify(image)
             
-            # REMOVED: image = enhance_image(image)
+            # Extract main vehicle
+            main_vehicle = results.get('main_vehicle', None)
             
-            if self.end_to_end:
-                # Run end-to-end model
-                results, inference_time = self.model.detect_and_classify(image)
-                
-                # Extract main vehicle
-                main_vehicle = results.get('main_vehicle', None)
-                
-                end_time = time.time()
-                
-                # Return results
-                return {
-                    'pipeline': f"{self.detector_name}",
-                    'detection_time': inference_time,
-                    'classification_time': 0.0,  # No separate classification step
-                    'total_time': end_time - start_time,
-                    'detections': results.get('detections', []),
-                    'main_vehicle': main_vehicle,
-                    'main_vehicle_class': main_vehicle['class'] if main_vehicle else None,
-                    'main_vehicle_confidence': main_vehicle['score'] if main_vehicle else None,
-                }
+            end_time = time.time()
+            
+            # Return results
+            return {
+                'pipeline': f"{self.detector_name}",
+                'detection_time': inference_time,
+                'classification_time': 0.0,  # No separate classification step
+                'total_time': end_time - start_time,
+                'detections': results.get('detections', []),
+                'main_vehicle': main_vehicle,
+                'main_vehicle_class': main_vehicle['class'] if main_vehicle else None,
+                'main_vehicle_confidence': main_vehicle['score'] if main_vehicle else None,
+            }
+        else:
+            # Run detector - ONLY FOR BOUNDING BOXES, NO CLASS OVERRIDE
+            detections, detection_time = self.detector.detect(image)
+            
+            # Find main vehicle based on bounding box position and size only
+            main_vehicle = self.detector.find_main_vehicle(detections, image.shape)
+            
+            if main_vehicle is None:
+                # No objects detected
+                classification_time = 0.0
+                main_vehicle_class = None
+                class_confidence = None
+                all_scores = {}
             else:
-                # Run detector
-                detections, detection_time = self.detector.detect(image)
+                # Crop main vehicle for classification
+                cropped_vehicle = self.detector.crop_bbox(image, main_vehicle['bbox'])
                 
-                # Find main vehicle
-                main_vehicle = self.detector.find_main_vehicle(detections, image.shape)
+                # Let the classifier do its job - NO INTERFERENCE
+                classification, classification_time = self.classifier.classify(cropped_vehicle)
                 
-                if main_vehicle is None:
-                    # No vehicles detected
-                    classification_time = 0.0
-                    main_vehicle_class = None
-                    class_confidence = None
-                    all_scores = {}
-                else:
-                    # Crop main vehicle
-                    cropped_vehicle = self.detector.crop_bbox(image, main_vehicle['bbox'])
-                    
-                    # Classify cropped vehicle
-                    classification, classification_time = self.classifier.classify(cropped_vehicle)
-                    
-                    # Extract classification results
-                    main_vehicle_class = classification['class']
-                    class_confidence = classification['score']
-                    all_scores = classification.get('all_scores', {})
-                
-                end_time = time.time()
-                
-                # Return results
-                return {
-                    'pipeline': f"{self.detector_name}+{self.classifier_name}",
-                    'detection_time': detection_time,
-                    'classification_time': classification_time,
-                    'total_time': end_time - start_time,
-                    'detections': detections,
-                    'main_vehicle': main_vehicle,
-                    'main_vehicle_class': main_vehicle_class,
-                    'main_vehicle_confidence': class_confidence,
-                    'class_scores': all_scores,
-                }
+                # Extract classification results - trust the classifier completely
+                main_vehicle_class = classification['class']
+                class_confidence = classification['score']
+                all_scores = classification.get('all_scores', {})
+            
+            end_time = time.time()
+            
+            # Return results
+            return {
+                'pipeline': f"{self.detector_name}+{self.classifier_name}",
+                'detection_time': detection_time,
+                'classification_time': classification_time,
+                'total_time': end_time - start_time,
+                'detections': detections,
+                'main_vehicle': main_vehicle,
+                'main_vehicle_class': main_vehicle_class,
+                'main_vehicle_confidence': class_confidence,
+                'class_scores': all_scores,
+            }
 
 def create_pipeline(detector: str, classifier: str = None, **kwargs) -> InferencePipeline:
     """

@@ -341,10 +341,10 @@ class DetectionVisualizer:
         self.preprocessor = VehicleImageEnhancer()
         
     def visualize_detection(self, 
-                          image: np.ndarray, 
-                          prediction: Dict[str, Any], 
-                          save_path: Optional[str] = None,
-                          enhance_image: bool = True) -> None:
+                        image: np.ndarray, 
+                        prediction: Dict[str, Any], 
+                        save_path: Optional[str] = None,
+                        enhance_image: bool = True) -> None:
         """
         Visualize a single detection result.
         
@@ -365,14 +365,17 @@ class DetectionVisualizer:
             fig, ax = plt.subplots(figsize=self.config.SINGLE_PLOT_SIZE)
             ax.imshow(display_image)
             
-            # Extract prediction information
-            class_name = prediction.get('main_vehicle_class', 'Unknown')
-            confidence = prediction.get('main_vehicle_confidence', 0.0)
-            detection_time = prediction.get('detection_time', 0.0)
-            classification_time = prediction.get('classification_time', 0.0)
-            pipeline_name = prediction.get('pipeline', 'Unknown')
+            # Extract prediction information with safe defaults
+            if prediction.get('main_vehicle_class') is None:
+                class_name = 'non-vehicle'
+            else:
+                class_name = prediction.get('main_vehicle_class')
+            confidence = prediction.get('main_vehicle_confidence') or 0.0
+            detection_time = prediction.get('detection_time') or 0.0
+            classification_time = prediction.get('classification_time') or 0.0
+            pipeline_name = prediction.get('pipeline') or 'Unknown'
             
-            # Set title
+            # Set title with safe formatting
             title = (f"Pipeline: {pipeline_name}\n"
                     f"Class: {class_name} (Confidence: {confidence:.2f})\n"
                     f"Times - Detection: {detection_time:.3f}s, Classification: {classification_time:.3f}s")

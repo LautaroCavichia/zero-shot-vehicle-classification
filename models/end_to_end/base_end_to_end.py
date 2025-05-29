@@ -1,5 +1,5 @@
 """
-Base class for end-to-end zero-shot detection and classification models
+Base class for end-to-end zero-shot detection and classification models - Updated with weighted centrality
 """
 from abc import ABC, abstractmethod
 from typing import Dict, List, Tuple, Optional
@@ -189,17 +189,21 @@ class BaseEndToEndModel(ABC):
         """
         label_lower = label.lower()
         
-        # Map to standardized classes
-        if any(term in label_lower for term in ["person", "pedestrian", "people", "human"]):
+        # Map to standardized classes with improved prompts
+        if any(term in label_lower for term in ["person", "pedestrian", "people", "human", "man", "woman", "child"]):
             return "non-vehicle"
-        elif any(term in label_lower for term in ["car", "sedan", "coupe", "suv", "automobile"]):
-            return "car"
+        elif any(term in label_lower for term in ["car", "sedan", "coupe", "automobile", "hatchback", "station wagon", "compact"]):
+            return "city_car"
+        elif any(term in label_lower for term in ["suv", "sport utility", "pickup", "jeep", "4x4", "crossover"]):
+            return "large_suv"
         elif any(term in label_lower for term in ["van", "minivan", "delivery", "panel"]):
             return "van" 
-        elif any(term in label_lower for term in ["truck", "pickup", "freight", "cargo"]):
+        elif any(term in label_lower for term in ["truck", "freight", "cargo", "lorry", "semi"]):
             return "truck"
         elif any(term in label_lower for term in ["bus", "coach", "transit"]):
             return "bus"
+        elif any(term in label_lower for term in ["motorcycle", "motorbike", "bike", "scooter"]):
+            return "motorcycle"
         else:
             # Check if it's already a valid class
             if label_lower in [cls.lower() for cls in VEHICLE_CLASSES]:
@@ -267,7 +271,7 @@ class BaseEndToEndModel(ABC):
     def _find_main_vehicle(self, detections: List[EndToEndDetection], 
                           image_shape: Tuple[int, int, int]) -> Optional[EndToEndDetection]:
         """
-        Find the main vehicle in the image based on centrality and size
+        Find the main vehicle in the image based on weighted centrality and size
         
         Args:
             detections: List of EndToEndDetection objects
@@ -280,23 +284,27 @@ class BaseEndToEndModel(ABC):
             logger.debug("No detections found, returning None for main vehicle")
             return None
         
-        # Filter out non-vehicles first
+        # Filter out non-vehicles first (unless that's all we have)
         vehicle_detections = [det for det in detections if det.predicted_class != 'non-vehicle']
         
+        # If no vehicles found, consider non-vehicles (pedestrians might be the main subject)
         if not vehicle_detections:
-            logger.debug("No vehicle detections found")
-            return None
+            vehicle_detections = detections
         
         img_height, img_width = image_shape[:2]
-        img_center = (img_width / 2, img_height / 2)
+        img_center_x = img_width / 2
+        img_center_y = img_height / 2
         img_area = img_width * img_height
-        img_diagonal = np.sqrt(img_width**2 + img_height**2)
         
         # Get scoring weights from config
         centrality_weight = MAIN_VEHICLE_SCORING['centrality_weight']
         size_weight = MAIN_VEHICLE_SCORING['size_weight']
         min_area = MAIN_VEHICLE_SCORING['min_area_threshold']
         max_distance = MAIN_VEHICLE_SCORING['max_distance_threshold']
+        
+        # Get weighted centrality weights
+        vertical_weight = MAIN_VEHICLE_SCORING['vertical_centrality_weight']
+        horizontal_weight = MAIN_VEHICLE_SCORING['horizontal_centrality_weight']
         
         # Calculate score for each vehicle detection
         scored_detections = []
@@ -307,21 +315,25 @@ class BaseEndToEndModel(ABC):
                 continue
             
             # Calculate bbox center
-            bbox_center = ((det.bbox[0] + det.bbox[2]) / 2, (det.bbox[1] + det.bbox[3]) / 2)
+            bbox_center_x = (det.bbox[0] + det.bbox[2]) / 2
+            bbox_center_y = (det.bbox[1] + det.bbox[3]) / 2
             
-            # Calculate distance from image center
-            distance = np.sqrt((bbox_center[0] - img_center[0])**2 + 
-                             (bbox_center[1] - img_center[1])**2)
+            # Calculate separate horizontal and vertical distances from center
+            horizontal_distance = abs(bbox_center_x - img_center_x) / img_width
+            vertical_distance = abs(bbox_center_y - img_center_y) / img_height
             
-            # Normalize distance by image diagonal
-            normalized_distance = distance / img_diagonal
+            # Calculate weighted centrality distance
+            weighted_distance = (
+                horizontal_weight * horizontal_distance + 
+                vertical_weight * vertical_distance
+            )
             
             # Skip detections that are too far from center
-            if normalized_distance > max_distance:
+            if weighted_distance > max_distance:
                 continue
             
-            # Calculate centrality score (1 - normalized_distance)
-            centrality = 1 - normalized_distance
+            # Calculate weighted centrality score (1 - weighted_distance)
+            centrality = 1 - weighted_distance
             
             # Calculate size score (normalized by image area)
             size_score = det.area / img_area

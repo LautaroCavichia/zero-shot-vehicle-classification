@@ -40,17 +40,17 @@ class BenchmarkConfig:
     
     # Default pipeline configurations
     DETECTOR_CLASSIFIER_PIPELINES = [
-        ('yolov12', 'clip'),
-        ('yolov12', 'openclip'), 
+        # ('yolov12', 'clip'),
+        # ('yolov12', 'openclip'), 
         ('yolov12', 'siglip'),
-        ('yolov12', 'git'),
+        # ('yolov12', 'git'),
         # ('supervision', 'clip'),
         # ('supervision', 'openclip'),
         # ('supervision', 'siglip'), 
         # ('supervision', 'git'),
-        ('ssd', 'clip'),
+        # ('ssd', 'clip'),
         # ('ssd', 'openclip'),
-        ('ssd', 'siglip'),
+        # ('ssd', 'siglip'),
         # ('ssd', 'git'),
     ]
     

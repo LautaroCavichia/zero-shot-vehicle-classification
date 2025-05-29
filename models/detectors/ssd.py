@@ -1,5 +1,5 @@
 """
-SSD detector implementation
+SSD detector implementation with correct PyTorch COCO class IDs
 """
 import logging
 from typing import List
@@ -9,6 +9,7 @@ import numpy as np
 import torch
 import torchvision
 import torchvision.transforms as transforms
+from PIL import Image
 
 from .base_detector import BaseDetector, DetectionResult
 
@@ -16,10 +17,10 @@ logger = logging.getLogger(__name__)
 
 
 class SsdDetector(BaseDetector):
-    """SSD-based detector for object detection"""
+    """SSD-based detector with correct PyTorch COCO class IDs"""
     
     def _initialize_model(self) -> None:
-        """Initialize SSD model"""
+        """Initialize SSD model with proper weights and class mapping"""
         try:
             # Get model configuration
             model_sizes = self.config.get('model_sizes', {})
@@ -31,19 +32,25 @@ class SsdDetector(BaseDetector):
             elif self.model_size in model_sizes:
                 model_name = model_sizes[self.model_size]
                 
-                # Load pretrained SSD model based on configuration
+                # Load pretrained SSD model with proper weights
                 if model_name == "ssd_mobilenet_v3":
-                    self.model = torchvision.models.detection.ssdlite320_mobilenet_v3_large(
-                        weights=torchvision.models.detection.SSDLite320_MobileNet_V3_Large_Weights.DEFAULT
+                    from torchvision.models.detection import ssdlite320_mobilenet_v3_large, SSDLite320_MobileNet_V3_Large_Weights
+                    
+                    self.model = ssdlite320_mobilenet_v3_large(
+                        weights=SSDLite320_MobileNet_V3_Large_Weights.COCO_V1
                     )
+                    
                 elif model_name == "ssd_vgg16":
-                    self.model = torchvision.models.detection.ssd300_vgg16(
-                        weights=torchvision.models.detection.SSD300_VGG16_Weights.DEFAULT
+                    from torchvision.models.detection import ssd300_vgg16, SSD300_VGG16_Weights
+                    
+                    self.model = ssd300_vgg16(
+                        weights=SSD300_VGG16_Weights.COCO_V1
                     )
+                    
                 else:
                     raise ValueError(f"Unsupported SSD model: {model_name}")
                 
-                logger.info(f"Loaded pretrained SSD model: {model_name}")
+                logger.info(f"Loaded pretrained SSD model: {model_name} with COCO_V1 weights")
             else:
                 raise ValueError(f"Invalid model size '{self.model_size}'. "
                                f"Available sizes: {list(model_sizes.keys())}")
@@ -52,10 +59,19 @@ class SsdDetector(BaseDetector):
             self.model.eval()
             self.model.to(self.device)
             
-            # Define image preprocessing transforms
+            # Define proper preprocessing transforms
             self.transform = transforms.Compose([
-                transforms.ToTensor(),
+                transforms.ToTensor(),  # Converts PIL to tensor and scales to [0,1]
+                transforms.Normalize(
+                    mean=[0.485, 0.456, 0.406],  # ImageNet means
+                    std=[0.229, 0.224, 0.225]   # ImageNet stds
+                )
             ])
+            
+            # Log the correct COCO class mapping for debugging
+            logger.info("SSD using PyTorch COCO class IDs:")
+            logger.info("  1: person, 2: bicycle, 3: car, 4: motorcycle")
+            logger.info("  6: bus, 7: train, 8: truck")
             
             logger.info(f"Successfully initialized SSD model on {self.device}")
             
@@ -65,7 +81,7 @@ class SsdDetector(BaseDetector):
     
     def _run_inference(self, image: np.ndarray) -> List[DetectionResult]:
         """
-        Run SSD inference on the image
+        Run SSD inference on the image with proper preprocessing
         
         Args:
             image: Input image (RGB format, numpy array)
@@ -74,23 +90,26 @@ class SsdDetector(BaseDetector):
             List of DetectionResult objects
         """
         try:
-            # Convert image to tensor and add batch dimension
-            if image.dtype != np.float32:
-                # Normalize to [0, 1] if not already
-                image_tensor = torch.from_numpy(image.astype(np.float32) / 255.0)
+            # Convert numpy array to PIL Image for proper preprocessing
+            if isinstance(image, np.ndarray):
+                # Ensure image is in uint8 format
+                if image.dtype != np.uint8:
+                    image = (image * 255).astype(np.uint8) if image.max() <= 1.0 else image.astype(np.uint8)
+                
+                # Convert to PIL
+                pil_image = Image.fromarray(image)
             else:
-                image_tensor = torch.from_numpy(image)
+                pil_image = image
             
-            # Ensure tensor is in CHW format
-            if image_tensor.dim() == 3 and image_tensor.shape[2] == 3:
-                image_tensor = image_tensor.permute(2, 0, 1)  # HWC to CHW
+            # Apply transforms: PIL -> Tensor -> Normalized
+            image_tensor = self.transform(pil_image)
             
             # Add batch dimension and move to device
-            image_tensor = image_tensor.unsqueeze(0).to(self.device)
+            image_batch = image_tensor.unsqueeze(0).to(self.device)
             
             # Run inference
             with torch.no_grad():
-                predictions = self.model(image_tensor)
+                predictions = self.model(image_batch)
             
             detections = []
             
@@ -102,6 +121,11 @@ class SsdDetector(BaseDetector):
                 scores = pred.get('scores', torch.empty(0)).cpu().numpy()
                 labels = pred.get('labels', torch.empty(0)).cpu().numpy()
                 
+                # Debug: Log unique class IDs found
+                unique_classes = set(labels.astype(int)) if len(labels) > 0 else set()
+                if unique_classes:
+                    logger.debug(f"SSD detected classes: {unique_classes}")
+                
                 for i in range(len(boxes)):
                     confidence = float(scores[i])
                     
@@ -112,8 +136,15 @@ class SsdDetector(BaseDetector):
                     # Get box coordinates [x1, y1, x2, y2]
                     x1, y1, x2, y2 = boxes[i]
                     
-                    # Get class ID
+                    # Get class ID (PyTorch SSD COCO format)
                     class_id = int(labels[i])
+                    
+                    # Debug: Log detection details for vehicle classes
+                    if class_id in self.vehicle_class_ids:
+                        class_name_map = {1: "person", 2: "bicycle", 3: "car", 4: "motorcycle", 
+                                        6: "bus", 7: "train", 8: "truck"}
+                        class_name = class_name_map.get(class_id, f"class_{class_id}")
+                        logger.debug(f"SSD detected {class_name} (ID:{class_id}) with conf:{confidence:.3f}")
                     
                     # Calculate area
                     area = (x2 - x1) * (y2 - y1)
