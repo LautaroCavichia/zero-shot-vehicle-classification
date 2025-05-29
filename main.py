@@ -44,18 +44,18 @@ class BenchmarkConfig:
         ('yolov12', 'openclip'), 
         ('yolov12', 'siglip'),
         ('yolov12', 'git'),
-        ('supervision', 'clip'),
-        ('supervision', 'openclip'),
-        ('supervision', 'siglip'), 
-        ('supervision', 'git'),
+        # ('supervision', 'clip'),
+        # ('supervision', 'openclip'),
+        # ('supervision', 'siglip'), 
+        # ('supervision', 'git'),
         ('ssd', 'clip'),
-        ('ssd', 'openclip'),
+        # ('ssd', 'openclip'),
         ('ssd', 'siglip'),
-        ('ssd', 'git'),
+        # ('ssd', 'git'),
     ]
     
     END_TO_END_PIPELINES = [
-        ('owlv2', None),        
+        # ('owlv2', None),        
         ('yolo_world', None),   
         # ('dino', None),         
     ]

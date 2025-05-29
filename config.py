@@ -18,18 +18,19 @@ RESULTS_DIR = PROJECT_ROOT / "results"
 # Ensure results directory exists
 RESULTS_DIR.mkdir(exist_ok=True)
 
-# Vehicle classes for zero-shot classification (matching CVAT export format)
-# These should match the categories in your CVAT COCO export exactly
-VEHICLE_CLASSES = ["car", "van", "truck", "bus", "non-vehicle"]
+# Vehicle classes for zero-shot classification (updated with new classes)
+VEHICLE_CLASSES = ["city_car", "large_suv", "van", "truck", "bus", "motorcycle", "non-vehicle"]
 
-# COCO category mapping for annotations (based on CVAT export)
+# COCO category mapping for annotations (updated for new classes)
 # Maps COCO category IDs to standardized vehicle class names
 COCO_CATEGORY_MAPPING = {
-    1: "car",           # Car -> car
-    2: "van",           # Van -> van
-    3: "truck",         # Truck -> truck
-    4: "bus",           # Bus -> bus
-    5: "non-vehicle"    # Non-vehicle -> non-vehicle
+    1: "city_car",      # City Car (small cars)
+    2: "large_suv",     # Large SUV 
+    3: "van",           # Van -> van
+    4: "truck",         # Truck -> truck
+    5: "bus",           # Bus -> bus
+    6: "motorcycle",    # Motorcycle -> motorcycle
+    7: "non-vehicle"    # Non-vehicle -> non-vehicle
 }
 
 # Reverse mapping for validation
@@ -48,14 +49,29 @@ CLIP_TEMPLATES = [
 
 # Class-specific text descriptions for enhanced classification
 CLASS_DESCRIPTIONS = {
-    "car": [
-        "a sedan vehicle",
-        "a compact car",
-        "a family car",
-        "a passenger vehicle",
-        "an automobile",
-        "a private car",
-        "a regular car",
+    "city_car": [
+        "a small city car",
+        "a compact urban vehicle",
+        "a small sedan",
+        "a hatchback car",
+        "a mini car",
+        "a small passenger car",
+        "a compact automobile",
+        "a small family car",
+        "an economy car",
+        "a subcompact car",
+    ],
+    "large_suv": [
+        "a large SUV",
+        "a big sport utility vehicle", 
+        "a full-size SUV",
+        "a luxury SUV",
+        "a large 4x4 vehicle",
+        "a big family SUV",
+        "a premium SUV",
+        "a large crossover",
+        "a spacious SUV",
+        "a heavy-duty SUV",
     ],
     "van": [
         "a delivery van",
@@ -65,6 +81,7 @@ CLASS_DESCRIPTIONS = {
         "a cargo van",
         "a utility van",
         "a work van",
+        "a passenger van",
     ],
     "truck": [
         "a pickup truck",
@@ -75,6 +92,7 @@ CLASS_DESCRIPTIONS = {
         "a freight truck",
         "a commercial truck",
         "a delivery truck",
+        "a work truck",
     ],
     "bus": [
         "a public transit bus",
@@ -84,6 +102,19 @@ CLASS_DESCRIPTIONS = {
         "a city bus",
         "a public bus",
         "a passenger bus",
+        "a tour bus",
+    ],
+    "motorcycle": [
+        "a motorcycle",
+        "a motorbike",
+        "a bike with motor",
+        "a two-wheeled vehicle",
+        "a motor scooter",
+        "a sport bike",
+        "a touring motorcycle",
+        "a street bike",
+        "a cruiser motorcycle",
+        "a dirt bike",
     ],
     "non-vehicle": [
         "a person walking",
@@ -93,6 +124,8 @@ CLASS_DESCRIPTIONS = {
         "an empty road",
         "pedestrians",
         "people",
+        "a cyclist",
+        "a bicycle",
     ],
 }
 
@@ -222,21 +255,21 @@ END_TO_END_CONFIGS = {
 
 # Main vehicle scoring parameters (consistent across all models)
 MAIN_VEHICLE_SCORING = {
-    "centrality_weight": 0.7,      # Weight for distance from center
-    "size_weight": 0.3,            # Weight for object size
-    "min_area_threshold": 100,     # Minimum bounding box area in pixels
-    "max_distance_threshold": 0.8, # Maximum normalized distance from center
+    "centrality_weight": 0.8,      # Weight for distance from center
+    "size_weight": 0.2,            # Weight for object size
+    "min_area_threshold": 120,     # Minimum bounding box area in pixels
+    "max_distance_threshold": 0.7, # Maximum normalized distance from center
 }
 
-# Image preprocessing configuration
+# Image preprocessing configuration (DISABLED)
 PREPROCESSING_CONFIG = {
     "clahe_clip_limit": 2.0,
     "clahe_grid_size": (8, 8),
-    "sharpen_amount": 0.3,         # Reduced for better compatibility
-    "denoise_strength": 3,         # Reduced for better compatibility
-    "enhance_contrast": True,
-    "enhance_sharpness": True,
-    "reduce_noise": True,
+    "sharpen_amount": 0.3,
+    "denoise_strength": 3,
+    "enhance_contrast": False,     # DISABLED
+    "enhance_sharpness": False,    # DISABLED
+    "reduce_noise": False,         # DISABLED
 }
 
 # Performance and processing settings

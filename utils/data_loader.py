@@ -477,7 +477,7 @@ class COCOVehicleDataset:
 
 def create_dataloader(annotations_file: Optional[Path] = None,
                      images_dir: Optional[Path] = None,
-                     enable_preprocessing: bool = True,
+                     enable_preprocessing: bool = False,  
                      preprocessing_config: Optional[Dict] = None) -> COCOVehicleDataset:
     """
     Factory function to create a COCO vehicle dataset loader.
@@ -485,7 +485,7 @@ def create_dataloader(annotations_file: Optional[Path] = None,
     Args:
         annotations_file: Path to annotations file (defaults to config)
         images_dir: Path to images directory (defaults to config)
-        enable_preprocessing: Whether to enable image preprocessing
+        enable_preprocessing: Whether to enable image preprocessing (now defaults to False)
         preprocessing_config: Configuration for preprocessing
         
     Returns:
