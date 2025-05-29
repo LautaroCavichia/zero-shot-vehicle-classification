@@ -70,7 +70,7 @@ class InferencePipeline:
             """
             start_time = time.time()
             
-            image = enhance_image(image)
+            # REMOVED: image = enhance_image(image)
             
             if self.end_to_end:
                 # Run end-to-end model
@@ -131,7 +131,6 @@ class InferencePipeline:
                     'main_vehicle_confidence': class_confidence,
                     'class_scores': all_scores,
                 }
-
 
 def create_pipeline(detector: str, classifier: str = None, **kwargs) -> InferencePipeline:
     """
