@@ -10,7 +10,7 @@ from PIL import Image
 from ultralytics import YOLO
 
 from .base_end_to_end import BaseEndToEndModel, EndToEndDetection
-from config import VEHICLE_CLASSES
+from config import YOLO_WORLD_CLASSES
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ class YoloWorldDetector(BaseEndToEndModel):
             self.model.to(self.device)
             
             # Set the classes for zero-shot detection
-            self.model.set_classes(VEHICLE_CLASSES)
+            self.model.set_classes(YOLO_WORLD_CLASSES)
             
             logger.info(f"Successfully initialized YOLO-World model on {self.device}")
             
@@ -116,6 +116,7 @@ class YoloWorldDetector(BaseEndToEndModel):
                 results = self.model.predict(
                     source=np.array(image),
                     conf=self.confidence_threshold,
+                    agnostic_nms=True,
                     verbose=False
                 )
                 

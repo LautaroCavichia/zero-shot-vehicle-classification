@@ -1,5 +1,5 @@
 """
-Base detector class for object detection models
+Base detector class for object detection models - Updated with weighted centrality
 """
 from abc import ABC, abstractmethod
 from typing import Dict, List, Tuple, Optional, Union
@@ -80,7 +80,7 @@ class BaseDetector(ABC):
         self.confidence_threshold = confidence_threshold or self.config.get('confidence_threshold', 0.3)
         self.custom_model_path = custom_model_path
         
-        # Get vehicle class IDs for filtering
+        # Get vehicle class IDs for filtering (now includes person for non-vehicle detection)
         self.vehicle_class_ids = set(self.config.get('vehicle_class_ids', []))
         
         # Set up device
@@ -145,7 +145,7 @@ class BaseDetector(ABC):
             # Run model-specific inference
             detections = self._run_inference(image)
             
-            # Filter for vehicle classes only
+            # Filter for vehicle classes only (now includes person/bicycle for non-vehicle)
             vehicle_detections = [
                 det for det in detections 
                 if det.class_id in self.vehicle_class_ids
@@ -156,7 +156,7 @@ class BaseDetector(ABC):
             
             inference_time = time.time() - start_time
             
-            logger.debug(f"Detected {len(detection_dicts)} vehicles in {inference_time:.3f}s")
+            logger.debug(f"Detected {len(detection_dicts)} objects in {inference_time:.3f}s")
             
             return detection_dicts, inference_time
             
@@ -166,7 +166,7 @@ class BaseDetector(ABC):
     
     def find_main_vehicle(self, detections: List[Dict], image_shape: Tuple[int, int, int]) -> Optional[Dict]:
         """
-        Find the main vehicle in the image based on centrality and size
+        Find the main vehicle in the image based on weighted centrality and size
         
         Args:
             detections: List of detection dictionaries
@@ -180,15 +180,19 @@ class BaseDetector(ABC):
             return None
         
         img_height, img_width = image_shape[:2]
-        img_center = (img_width / 2, img_height / 2)
+        img_center_x = img_width / 2
+        img_center_y = img_height / 2
         img_area = img_width * img_height
-        img_diagonal = np.sqrt(img_width**2 + img_height**2)
         
         # Get scoring weights from config
         centrality_weight = MAIN_VEHICLE_SCORING['centrality_weight']
         size_weight = MAIN_VEHICLE_SCORING['size_weight']
         min_area = MAIN_VEHICLE_SCORING['min_area_threshold']
         max_distance = MAIN_VEHICLE_SCORING['max_distance_threshold']
+        
+        # Get weighted centrality weights
+        vertical_weight = MAIN_VEHICLE_SCORING['vertical_centrality_weight']
+        horizontal_weight = MAIN_VEHICLE_SCORING['horizontal_centrality_weight']
         
         # Calculate score for each detection
         scored_detections = []
@@ -202,21 +206,25 @@ class BaseDetector(ABC):
                 continue
             
             # Calculate bbox center
-            bbox_center = ((bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2)
+            bbox_center_x = (bbox[0] + bbox[2]) / 2
+            bbox_center_y = (bbox[1] + bbox[3]) / 2
             
-            # Calculate distance from image center
-            distance = np.sqrt((bbox_center[0] - img_center[0])**2 + 
-                             (bbox_center[1] - img_center[1])**2)
+            # Calculate separate horizontal and vertical distances from center
+            horizontal_distance = abs(bbox_center_x - img_center_x) / img_width
+            vertical_distance = abs(bbox_center_y - img_center_y) / img_height
             
-            # Normalize distance by image diagonal
-            normalized_distance = distance / img_diagonal
+            # Calculate weighted centrality distance
+            weighted_distance = (
+                horizontal_weight * horizontal_distance + 
+                vertical_weight * vertical_distance
+            )
             
             # Skip detections that are too far from center
-            if normalized_distance > max_distance:
+            if weighted_distance > max_distance:
                 continue
             
-            # Calculate centrality score (1 - normalized_distance)
-            centrality = 1 - normalized_distance
+            # Calculate weighted centrality score (1 - weighted_distance)
+            centrality = 1 - weighted_distance
             
             # Calculate size score (normalized by image area)
             size_score = area / img_area
