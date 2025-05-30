@@ -171,6 +171,213 @@ CLASS_DESCRIPTIONS = {
     ],
 }
 
+GROUNDING_DINO_ENHANCED_PROMPTS = {
+    "city_car": [
+        "small passenger car on road",
+        "compact sedan vehicle", 
+        "city car in traffic",
+        "small automobile driving",
+        "passenger car with four doors",
+        "hatchback car on street"
+    ],
+    "large_suv": [
+        "large SUV vehicle on road",
+        "sport utility vehicle driving", 
+        "big family SUV in traffic",
+        "pickup truck vehicle",
+        "large crossover car",
+        "heavy duty SUV on street"
+    ],
+    "van": [
+        "delivery van on road",
+        "commercial van vehicle",
+        "passenger van driving",
+        "cargo van in traffic", 
+        "minivan on street",
+        "utility van vehicle"
+    ],
+    "truck": [
+        "large truck on road",
+        "freight truck vehicle",
+        "cargo truck driving",
+        "commercial truck in traffic",
+        "heavy duty truck on street", 
+        "delivery truck vehicle"
+    ],
+    "bus": [
+        "public bus on road",
+        "passenger bus vehicle",
+        "transit bus driving",
+        "city bus in traffic",
+        "school bus on street",
+        "coach bus vehicle"
+    ],
+    "motorcycle": [
+        "motorcycle on road",
+        "motorbike vehicle driving",
+        "person riding motorcycle",
+        "motorcycle with rider",
+        "motorbike in traffic",
+        "two-wheeled motor vehicle"
+    ],
+    "non-vehicle": [
+        "person walking on road",
+        "pedestrian on street",
+        "person standing near vehicles",
+        "people in traffic area",
+        "human figure on road",
+        "pedestrian crossing street"
+    ]
+}
+
+# GIT ENHANCED PROMPTS - Optimized for generative classification
+GIT_ENHANCED_PROMPTS = {
+    "city_car": [
+        "This image shows a small car",
+        "A compact passenger vehicle",
+        "A city car for daily commuting", 
+        "A small family automobile",
+        "A sedan for urban driving",
+        "A hatchback passenger car",
+        "A small personal vehicle",
+        "A compact city automobile",
+        "A regular passenger car",
+        "A standard sized vehicle"
+    ],
+    "large_suv": [
+        "This image shows a large SUV",
+        "A big sport utility vehicle",
+        "A family SUV for multiple passengers",
+        "A large crossover vehicle", 
+        "A heavy duty SUV",
+        "A pickup truck style vehicle",
+        "A spacious family vehicle",
+        "A large passenger SUV",
+        "A big recreational vehicle",
+        "A large off-road capable vehicle"
+    ],
+    "van": [
+        "This image shows a van",
+        "A delivery van for cargo",
+        "A passenger van for groups",
+        "A commercial utility van",
+        "A minivan for families",
+        "A cargo transport van",
+        "A service van vehicle",
+        "A multipurpose van",
+        "A work van for business",
+        "A utility transport vehicle"
+    ],
+    "truck": [
+        "This image shows a truck",
+        "A large freight truck",
+        "A cargo transport truck",
+        "A commercial delivery truck",
+        "A heavy duty truck",
+        "A goods transport vehicle",
+        "A large cargo truck", 
+        "A freight delivery vehicle",
+        "A commercial transport truck",
+        "A logistics truck vehicle"
+    ],
+    "bus": [
+        "This image shows a bus",
+        "A public transportation bus",
+        "A passenger bus for many people",
+        "A city transit bus",
+        "A school bus for students",
+        "A public transport vehicle",
+        "A mass transit bus",
+        "A passenger coach bus",
+        "A group transportation vehicle",
+        "A public service bus"
+    ],
+    "motorcycle": [
+        "This image shows a motorcycle",
+        "A person riding a motorcycle", 
+        "A motorbike with a rider",
+        "A two-wheeled motor vehicle",
+        "A motorcycle on the road",
+        "A person on a motorbike",
+        "A rider on a motorcycle",
+        "A motorized two-wheeler",
+        "A motorcycle being driven",
+        "A person using a motorcycle"
+    ],
+    "non-vehicle": [
+        "This image shows a person",
+        "A pedestrian walking",
+        "A human figure standing",
+        "People in the scene",
+        "A person on foot",
+        "Pedestrians in the area",
+        "A human being present",
+        "A person without a vehicle",
+        "People walking or standing",
+        "Human subjects in the image"
+    ]
+}
+
+# DYNAMIC PROMPT SELECTION STRATEGIES
+PROMPT_SELECTION_STRATEGIES = {
+    "grounding_dino": {
+        "use_contextual_descriptors": True,      # "car on road" vs "car"
+        "combine_multiple_prompts": True,        # Use multiple prompts per class
+        "separator": " . ",                      # Period separation as recommended
+        "max_prompts_per_class": 3,             # Limit for performance
+        "prioritize_specific_terms": True,       # Avoid generic "vehicle"
+        "include_scene_context": True           # Add road/traffic context
+    },
+    "git": {
+        "use_natural_language": True,           # Full sentences work better
+        "include_demonstrative_pronouns": True, # "This image shows..."
+        "vary_sentence_structure": True,        # Different sentence patterns
+        "use_descriptive_adjectives": True,     # Size, function descriptors
+        "include_use_case_context": True       # Purpose-based descriptions
+    }
+}
+
+# ADAPTIVE CONFIDENCE THRESHOLDS - Based on model characteristics
+ADAPTIVE_THRESHOLDS = {
+    "grounding_dino": {
+        "base_confidence": 0.25,
+        "text_threshold": 0.20,
+        "class_specific_adjustments": {
+            "city_car": 0.30,      # Higher threshold for most common class
+            "large_suv": 0.25,     # Standard threshold
+            "van": 0.25,           # Standard threshold  
+            "truck": 0.22,         # Lower for less common
+            "bus": 0.20,           # Lower for rare class
+            "motorcycle": 0.20,    # Lower for rare class
+            "non-vehicle": 0.35    # Higher for non-vehicle detection
+        }
+    },
+    "git": {
+        "similarity_threshold": 0.4,
+        "caption_length_preference": "medium",  # 20-40 tokens work best
+        "use_ensemble_scoring": True,           # Average multiple similarities
+        "boost_exact_matches": True            # Higher weight for exact term matches
+    }
+}
+
+# PERFORMANCE OPTIMIZATION SETTINGS
+OPTIMIZATION_CONFIGS = {
+    "grounding_dino": {
+        "enable_fast_inference": True,
+        "use_efficient_prompts": True,         # Shorter, focused prompts
+        "batch_text_processing": True,         # Process prompts together
+        "cache_text_features": True,           # Cache encoded text features
+        "use_smart_nms": True                  # Improved non-max suppression
+    },
+    "git": {
+        "enable_caption_caching": True,        # Cache generated captions
+        "use_beam_search": False,              # Faster greedy decoding
+        "optimize_similarity_computation": True, # Vectorized similarity
+        "precompute_class_embeddings": True,   # Pre-encode class descriptions
+        "use_lightweight_similarity": True     # Faster similarity models
+    }
+}
+
 # Detection model configurations - UPDATED TO INCLUDE PERSON CLASS
 DETECTOR_CONFIGS = {
     "yolov12": {
