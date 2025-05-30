@@ -20,7 +20,6 @@ RESULTS_DIR.mkdir(exist_ok=True)
 
 # Vehicle classes for zero-shot classification (updated with new classes)
 VEHICLE_CLASSES = ["city_car", "large_suv", "van", "truck", "bus", "motorcycle", "non-vehicle"]
-YOLO_WORLD_CLASSES = ["car", "suv", "van", "truck", "bus", "motorcycle", "person"]
 
 # COCO category mapping for annotations (updated for new classes)
 # Maps COCO category IDs to standardized vehicle class names
@@ -36,6 +35,33 @@ COCO_CATEGORY_MAPPING = {
 
 # Reverse mapping for validation
 VEHICLE_CLASS_TO_COCO_ID = {v: k for k, v in COCO_CATEGORY_MAPPING.items()}
+
+YOLO_WORLD_ENHANCED_PROMPTS = {
+    "city_car": [
+        "car", "sedan", "hatchback", "small car", "passenger car", 
+        "compact car", "city car", "automobile"
+    ],
+    "large_suv": [
+        "SUV", "large SUV", "pickup truck", "4x4", "sport utility vehicle",
+        "crossover", "large car", "big car"
+    ],
+    "van": [
+        "van", "minivan", "delivery van", "panel van", "cargo van"
+    ],
+    "truck": [
+        "truck", "large truck", "freight truck", "cargo truck", 
+        "semi truck", "heavy truck"
+    ],
+    "bus": [
+        "bus", "school bus", "public bus", "coach", "transit bus"
+    ],
+    "motorcycle": [
+        "motorcycle", "motorbike", "scooter", "bike", "moped"
+    ],
+    "non-vehicle": [
+        "person", "pedestrian", "people", "human", "man", "woman"
+    ]
+}
 
 # CLIP text templates for enhanced zero-shot performance
 CLIP_TEMPLATES = [
@@ -274,21 +300,29 @@ END_TO_END_CONFIGS = {
 MAIN_VEHICLE_SCORING = {
     "centrality_weight": 0.7,      # Weight for distance from center
     "size_weight": 0.3,            # Weight for object size
-    "min_area_threshold": 150,     # Minimum bounding box area in pixels
-    "max_distance_threshold": 0.7, # Maximum normalized distance from center
-    "vertical_centrality_weight": 0.6,    # 60% weight to vertical centrality
-    "horizontal_centrality_weight": 0.4,  # 40% weight to horizontal centrality
+    "min_area_threshold": 200,     # Minimum bounding box area in pixels
+    "max_distance_threshold": 0.75, # Maximum normalized distance from center
+    "vertical_centrality_weight": 0.65,    
+    "horizontal_centrality_weight": 0.35,  
 }
 
 # Image preprocessing configuration (DISABLED)
 PREPROCESSING_CONFIG = {
     "clahe_clip_limit": 2.0,
     "clahe_grid_size": (8, 8),
-    "sharpen_amount": 0.3,
+    "sharpen_amount": 0.3,  
     "denoise_strength": 3,
     "enhance_contrast": False,     # DISABLED
     "enhance_sharpness": False,    # DISABLED
     "reduce_noise": False,         # DISABLED
+}
+
+YOLO_WORLD_PROMPT_STRATEGIES = {
+    "use_specific_descriptors": True,      # "small passenger car" vs "car"
+    "include_secondary_objects": True,     # Add competing classes to reduce false positives
+    "use_contextual_prompts": True,        # "car on road" vs "car"
+    "multiple_prompts_per_class": True,    # Use 3-6 prompts per class
+    "avoid_generic_terms": True,           # Avoid "vehicle", use specific types
 }
 
 # Performance and processing settings
